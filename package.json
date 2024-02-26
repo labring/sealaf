@@ -1,0 +1,44 @@
+{
+  "name": "sealaf",
+  "version": "1.0.0",
+  "description": "laf.js serverless cloud development platform",
+  "private": "true",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/labring/laf.git"
+  },
+  "scripts": {
+    "install": "lerna exec npm install --parallel",
+    "lint": "lerna run lint --parallel",
+    "lint-staged": "lerna exec --since HEAD --parallel -- lint-staged --no-stash",
+    "build": "lerna run build --parallel",
+    "watch": "lerna run watch --parallel",
+    "prepublishOnly": "npm run build",
+    "changelog": "npx conventional-changelog -i CHANGELOG.md -s -r 0 -p angular",
+    "clean:build": "rm -rf ./packages/*/dist",
+    "stats": "find ./packages -name '*.ts' | xargs cat | grep -v ^$| wc -l",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "laf",
+    "faas",
+    "baas",
+    "serverless",
+    "firebase",
+    "minio",
+    "mongodb",
+    "supabase",
+    "appwrite",
+    "cloudbase"
+  ],
+  "devDependencies": {
+    "conventional-changelog-cli": "^2.1.1",
+    "cross-env": "^7.0.3",
+    "editorconfig": "^2.0.0",
+    "eslint-config-laf": "./packages/eslint-config-laf",
+    "husky": "^8.0.0",
+    "lerna": "^6.4.1",
+    "lint-staged": "^15.1.0",
+    "typescript": "5.0.4"
+  }
+}
