@@ -1,12 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from '../region/region.service'
 import { SystemDatabase } from 'src/system-database'
-import { BucketPolicy } from './entities/storage-bucket'
-import { BucketService } from './bucket.service'
-import { CreateBucketDto } from './dto/create-bucket.dto'
 import { S3, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import * as assert from 'assert'
+import { ClusterService } from 'src/region/cluster/cluster.service'
 
 @Injectable()
 export class CloudBinBucketService {
@@ -16,26 +14,36 @@ export class CloudBinBucketService {
   constructor(
     // private readonly storageService: StorageService,
     private readonly regionService: RegionService,
-    private readonly bucketService: BucketService,
+    private readonly clusterService: ClusterService
   ) {}
 
   // get cloud-bin bucket or create it if not exists
   async ensureCloudBinBucket(appid: string) {
+    const user = await this.clusterService.getUserByAppid(appid)
     const shortName = `cloud-bin`
     const bucketName = `${appid}-${shortName}`
-    const bucket = await this.bucketService.findOne(appid, bucketName)
-    if (bucket) {
-      return bucket
-    }
+    try {
+      const bucket = await this.clusterService.getStorageBucket(user, bucketName)
+      if (bucket) {
+        return bucket
+      }
+    } catch  {}
 
     // create cloud-bin bucket in db
-    const dto = new CreateBucketDto()
-    dto.shortName = shortName
-    dto.policy = BucketPolicy.private
-    const created = await this.bucketService.create(appid, dto)
+    const created = await this.clusterService.createStorageBucket(user, bucketName, "private")
     this.logger.log(`creating cloud-bin bucket ${bucketName} for app ${appid}`)
 
     return created
+  }
+
+  async deleteCloudBinBucket(appid: string) {
+    const user = await this.clusterService.getUserByAppid(appid)
+    const shortName = `cloud-bin`
+    const bucketName = `${appid}-${shortName}`
+
+    const res = await this.clusterService.deleteStorageBucket(user, bucketName)
+    this.logger.warn(`delete cloud-bin bucket ${bucketName} for app ${appid}`)
+    return res
   }
 
   async createPullUrl(appid: string, filename: string) {
@@ -68,15 +76,14 @@ export class CloudBinBucketService {
   }
 
   async getS3Client(appid: string) {
+    const user = await this.clusterService.getUserByAppid(appid)
     const region = await this.regionService.findByAppId(appid)
-    assert(region, `region not found for app ${appid}`)
 
-    const conf = region.storageConf
-    // const storage = await this.storageService.findOne(appid)
+    const conf = await this.clusterService.getStorageConf(user)
 
     const client = new S3({
       region: region.name,
-      endpoint: conf.internalEndpoint,
+      endpoint: conf.internal,
       credentials: {
         accessKeyId: conf.accessKey,
         secretAccessKey: conf.secretKey,
