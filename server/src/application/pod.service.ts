@@ -2,7 +2,6 @@ import { V1Pod, V1PodList } from '@kubernetes/client-node'
 import { Injectable, Logger } from '@nestjs/common'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { RegionService } from 'src/region/region.service'
-import { GetApplicationNamespace } from 'src/utils/getter'
 import http from 'http'
 import { PodNameListDto, ContainerNameListDto } from './dto/pod.dto'
 import { LABEL_KEY_APP_ID } from 'src/constants'
@@ -16,12 +15,11 @@ export class PodService {
     private readonly cluster: ClusterService,
   ) {}
   async getPodNameListByAppid(appid: string) {
-    const region = await this.regionService.findByAppId(appid)
-    const namespaceOfApp = GetApplicationNamespace(region, appid)
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
+    const user = await this.cluster.getUserByAppid(appid)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
     const res: { response: http.IncomingMessage; body: V1PodList } =
       await coreV1Api.listNamespacedPod(
-        namespaceOfApp,
+        user.namespace,
         undefined,
         undefined,
         undefined,
@@ -36,12 +34,11 @@ export class PodService {
   }
 
   async getContainerNameListByPodName(appid: string, podName: string) {
-    const region = await this.regionService.findByAppId(appid)
-    const namespaceOfApp = GetApplicationNamespace(region, appid)
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
+    const user = await this.cluster.getUserByAppid(appid)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
 
     const res: { response: http.IncomingMessage; body: V1Pod } =
-      await coreV1Api.readNamespacedPod(podName, namespaceOfApp)
+      await coreV1Api.readNamespacedPod(podName, user.namespace)
 
     const containerNameList =
       res.body.spec.containers?.map((container) => container.name) || []

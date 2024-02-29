@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import * as assert from 'node:assert'
-import { StorageService } from '../storage/storage.service'
-import { DatabaseService } from '../database/database.service'
-import { ClusterService } from 'src/region/cluster/cluster.service'
 import { RegionService } from 'src/region/region.service'
 import { RuntimeDomainService } from 'src/gateway/runtime-domain.service'
 import { ServerConfig, TASK_LOCK_INIT_TIME } from 'src/constants'
@@ -12,20 +9,14 @@ import { TriggerService } from 'src/trigger/trigger.service'
 import { FunctionService } from 'src/function/function.service'
 import { ApplicationConfigurationService } from './configuration.service'
 import { BundleService } from 'src/application/bundle.service'
-import { WebsiteService } from 'src/website/website.service'
-import { PolicyService } from 'src/database/policy/policy.service'
-import { BucketDomainService } from 'src/gateway/bucket-domain.service'
 import {
   Application,
   ApplicationPhase,
   ApplicationState,
 } from './entities/application'
-import { DatabasePhase } from 'src/database/entities/database'
 import { DomainPhase } from 'src/gateway/entities/runtime-domain'
-import { StoragePhase } from 'src/storage/entities/storage-user'
-import { ApplicationNamespaceMode } from 'src/region/entities/region'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
-import { StorageBucket } from 'src/storage/entities/storage-bucket'
+import { CloudBinBucketService } from 'src/storage/cloud-bin-bucket.service'
 
 @Injectable()
 export class ApplicationTaskService {
@@ -34,18 +25,13 @@ export class ApplicationTaskService {
 
   constructor(
     private readonly regionService: RegionService,
-    private readonly clusterService: ClusterService,
-    private readonly storageService: StorageService,
-    private readonly databaseService: DatabaseService,
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
     private readonly runtimeDomainService: RuntimeDomainService,
-    private readonly bucketDomainService: BucketDomainService,
     private readonly triggerService: TriggerService,
     private readonly functionService: FunctionService,
     private readonly configurationService: ApplicationConfigurationService,
     private readonly bundleService: BundleService,
-    private readonly websiteService: WebsiteService,
-    private readonly policyService: PolicyService,
+    private readonly cloudbinService: CloudBinBucketService
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -103,25 +89,6 @@ export class ApplicationTaskService {
     const region = await this.regionService.findByAppId(appid)
     assert(region, `Region ${region.name} not found`)
 
-    // reconcile namespace
-    const namespace = await this.clusterService.getAppNamespace(region, appid)
-    if (!namespace) {
-      this.logger.debug(`Creating namespace for application ${appid}`)
-      await this.clusterService.createAppNamespace(
-        region,
-        appid,
-        app.createdBy.toString(),
-      )
-      return await this.unlock(appid)
-    }
-
-    // reconcile storage
-    let storage = await this.storageService.findOne(appid)
-    if (!storage) {
-      this.logger.log(`Creating storage for application ${appid}`)
-      storage = await this.storageService.create(app.appid)
-    }
-
     // reconcile runtime domain
     let runtimeDomain = await this.runtimeDomainService.findOne(appid)
     if (!runtimeDomain) {
@@ -129,26 +96,8 @@ export class ApplicationTaskService {
       runtimeDomain = await this.runtimeDomainService.create(appid)
     }
 
-    // reconcile database
-    const dedicatedDatabase = await this.dedicatedDatabaseService.findOne(appid)
-    if (!dedicatedDatabase) {
-      let database = await this.databaseService.findOne(appid)
-      if (!database) {
-        this.logger.log(`Creating database for application ${appid}`)
-        database = await this.databaseService.create(app.appid)
-      }
-
-      if (database?.phase !== DatabasePhase.Created) {
-        return await this.unlock(appid)
-      }
-    }
-
     // waiting resources' phase to be `Created`
     if (runtimeDomain?.phase !== DomainPhase.Created) {
-      return await this.unlock(appid)
-    }
-
-    if (storage?.phase !== StoragePhase.Created) {
       return await this.unlock(appid)
     }
 
@@ -217,13 +166,6 @@ export class ApplicationTaskService {
       return await this.unlock(appid)
     }
 
-    // delete database proxy policies
-    const hadPolicies = await this.policyService.count(appid)
-    if (hadPolicies > 0) {
-      await this.policyService.removeAll(appid)
-      return await this.unlock(appid)
-    }
-
     // delete application configuration
     const hadConfigurations = await this.configurationService.count(appid)
     if (hadConfigurations > 0) {
@@ -238,31 +180,10 @@ export class ApplicationTaskService {
       return await this.unlock(appid)
     }
 
-    // delete website
-    const hadWebsites = await this.websiteService.count(appid)
-    if (hadWebsites > 0) {
-      await this.websiteService.removeAll(appid)
-      return await this.unlock(appid)
-    }
-
     // delete runtime domain
     const runtimeDomain = await this.runtimeDomainService.findOne(appid)
     if (runtimeDomain) {
       await this.runtimeDomainService.deleteOne(appid)
-      return await this.unlock(appid)
-    }
-
-    // delete bucket domains
-    const hadBucketDomains = await this.bucketDomainService.count(appid)
-    if (hadBucketDomains > 0) {
-      await this.bucketDomainService.deleteAll(appid)
-      return await this.unlock(appid)
-    }
-
-    // delete application database
-    const database = await this.databaseService.findOne(appid)
-    if (database) {
-      await this.databaseService.delete(database)
       return await this.unlock(appid)
     }
 
@@ -272,30 +193,7 @@ export class ApplicationTaskService {
       return await this.unlock(appid)
     }
 
-    // delete application storage
-    const storage = await this.storageService.findOne(appid)
-    if (storage) {
-      await this.storageService.deleteUsersAndBuckets(appid)
-      return await this.unlock(appid)
-    }
-
-    const buckets = await db
-      .collection<StorageBucket>('StorageBucket')
-      .countDocuments({ appid })
-
-    if (buckets > 0) {
-      await this.storageService.deleteUsersAndBuckets(appid)
-      return await this.unlock(appid)
-    }
-
-    // delete application namespace (include the instance)
-    if (region.namespaceConf?.mode === ApplicationNamespaceMode.AppId) {
-      const namespace = await this.clusterService.getAppNamespace(region, appid)
-      if (namespace) {
-        await this.clusterService.removeAppNamespace(region, appid)
-        return await this.unlock(appid)
-      }
-    }
+    await this.cloudbinService.deleteCloudBinBucket(appid)
 
     // update phase to `Deleted`
     await db.collection<Application>('Application').updateOne(

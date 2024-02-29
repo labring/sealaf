@@ -10,8 +10,6 @@ import {
   ApplicationState,
 } from 'src/application/entities/application'
 import { DomainState, RuntimeDomain } from 'src/gateway/entities/runtime-domain'
-import { BucketDomain } from 'src/gateway/entities/bucket-domain'
-import { WebsiteHosting } from 'src/website/entities/website'
 import { CronTrigger, TriggerState } from 'src/trigger/entities/cron-trigger'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
 import {
@@ -182,22 +180,6 @@ export class InstanceTaskService {
         { $set: { state: DomainState.Active, updatedAt: new Date() } },
       )
 
-    // active website domain
-    await db
-      .collection<WebsiteHosting>('WebsiteHosting')
-      .updateMany(
-        { appid, state: DomainState.Inactive },
-        { $set: { state: DomainState.Active, updatedAt: new Date() } },
-      )
-
-    // active bucket domain
-    await db
-      .collection<BucketDomain>('BucketDomain')
-      .updateMany(
-        { appid, state: DomainState.Inactive },
-        { $set: { state: DomainState.Active, updatedAt: new Date() } },
-      )
-
     // active triggers if any
     await db
       .collection<CronTrigger>('CronTrigger')
@@ -280,22 +262,6 @@ export class InstanceTaskService {
     await db
       .collection<RuntimeDomain>('RuntimeDomain')
       .updateOne(
-        { appid, state: DomainState.Active },
-        { $set: { state: DomainState.Inactive, updatedAt: new Date() } },
-      )
-
-    // inactive website domain
-    await db
-      .collection<WebsiteHosting>('WebsiteHosting')
-      .updateMany(
-        { appid, state: DomainState.Active },
-        { $set: { state: DomainState.Inactive, updatedAt: new Date() } },
-      )
-
-    // inactive bucket domain
-    await db
-      .collection<BucketDomain>('BucketDomain')
-      .updateMany(
         { appid, state: DomainState.Active },
         { $set: { state: DomainState.Inactive, updatedAt: new Date() } },
       )

@@ -5,6 +5,7 @@ import { Runtime } from './runtime'
 import { ApplicationConfiguration } from './application-configuration'
 import { RuntimeDomain } from 'src/gateway/entities/runtime-domain'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { User } from 'src/user/entities/user'
 
 export enum ApplicationPhase {
   Creating = 'Creating',
@@ -72,6 +73,9 @@ export class Application {
 export class ApplicationWithRelations extends Application {
   @ApiPropertyOptional()
   region?: Region
+
+  @ApiPropertyOptional()
+  user?: User
 
   @ApiPropertyOptional()
   bundle?: ApplicationBundle

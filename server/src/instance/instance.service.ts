@@ -6,10 +6,7 @@ import {
   V2HorizontalPodAutoscalerSpec,
 } from '@kubernetes/client-node'
 import { Injectable, Logger } from '@nestjs/common'
-import { GetApplicationNamespace } from 'src/utils/getter'
 import { LABEL_KEY_APP_ID, MB, ServerConfig } from '../constants'
-import { StorageService } from '../storage/storage.service'
-import { DatabaseService } from 'src/database/database.service'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { ApplicationWithRelations } from 'src/application/entities/application'
 import { ApplicationService } from 'src/application/application.service'
@@ -23,8 +20,6 @@ export class InstanceService {
 
   constructor(
     private readonly cluster: ClusterService,
-    private readonly storageService: StorageService,
-    private readonly databaseService: DatabaseService,
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
     private readonly applicationService: ApplicationService,
     private readonly cloudbin: CloudBinBucketService,
@@ -52,31 +47,29 @@ export class InstanceService {
 
   public async remove(appid: string) {
     const app = await this.applicationService.findOneUnsafe(appid)
-    const region = app.region
+    const user = app.user
     const { deployment, service, hpa } = await this.get(appid)
 
-    const namespace = await this.cluster.getAppNamespace(region, app.appid)
-    if (!namespace) return // namespace not found, nothing to do
+    const namespace = user.namespace
 
-    const appsV1Api = this.cluster.makeAppsV1Api(region)
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(region)
+    const appsV1Api = this.cluster.makeAppsV1Api(user)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
 
     // ensure deployment deleted
     if (deployment) {
-      await appsV1Api.deleteNamespacedDeployment(appid, namespace.metadata.name)
+      await appsV1Api.deleteNamespacedDeployment(appid, namespace)
     }
-
     // ensure service deleted
     if (service) {
       const name = appid
-      await coreV1Api.deleteNamespacedService(name, namespace.metadata.name)
+      await coreV1Api.deleteNamespacedService(name, namespace)
     }
 
     if (hpa) {
       await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(
         appid,
-        namespace.metadata.name,
+        user.namespace
       )
     }
 
@@ -85,8 +78,8 @@ export class InstanceService {
 
   public async get(appid: string) {
     const app = await this.applicationService.findOneUnsafe(appid)
-    const region = app.region
-    const namespace = await this.cluster.getAppNamespace(region, app.appid)
+    const user = app.user
+    const namespace = user.namespace
     if (!namespace) {
       return { deployment: null, service: null, hpa: null, app }
     }
@@ -99,7 +92,7 @@ export class InstanceService {
 
   public async restart(appid: string) {
     const app = await this.applicationService.findOneUnsafe(appid)
-    const region = app.region
+    const user = app.user
     const { deployment, hpa, service } = await this.get(appid)
     if (!deployment || !service) {
       await this.create(appid)
@@ -110,11 +103,10 @@ export class InstanceService {
       app,
       deployment.spec.template.metadata.labels,
     )
-    const appsV1Api = this.cluster.makeAppsV1Api(region)
-    const namespace = GetApplicationNamespace(region, appid)
+    const appsV1Api = this.cluster.makeAppsV1Api(user)
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
       app.appid,
-      namespace,
+      user.namespace,
       deployment,
     )
 
@@ -126,10 +118,10 @@ export class InstanceService {
     service.spec = this.makeServiceSpec(
       deployment.spec.template.metadata.labels,
     )
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
     const serviceResult = await coreV1Api.replaceNamespacedService(
       service.metadata.name,
-      namespace,
+      user.namespace,
       service,
     )
 
@@ -144,17 +136,16 @@ export class InstanceService {
     labels: Record<string, string>,
   ) {
     const appid = app.appid
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
-    const namespace = GetApplicationNamespace(region, appid)
+    const namespace = user.namespace
 
     // create deployment
     const data = new V1Deployment()
     data.metadata = { name: app.appid, labels }
     data.spec = await this.makeDeploymentSpec(app, labels)
 
-    const appsV1Api = this.cluster.makeAppsV1Api(region)
+    const appsV1Api = this.cluster.makeAppsV1Api(user)
     const res = await appsV1Api.createNamespacedDeployment(namespace, data)
 
     this.logger.log(`create k8s deployment ${res.body?.metadata?.name}`)
@@ -166,14 +157,12 @@ export class InstanceService {
     app: ApplicationWithRelations,
     labels: Record<string, string>,
   ) {
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
-    const namespace = GetApplicationNamespace(region, app.appid)
     const serviceName = app.appid
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
     const spec = this.makeServiceSpec(labels)
-    const res = await coreV1Api.createNamespacedService(namespace, {
+    const res = await coreV1Api.createNamespacedService(user.namespace, {
       metadata: { name: serviceName, labels },
       spec: spec,
     })
@@ -183,13 +172,11 @@ export class InstanceService {
 
   private async getDeployment(app: ApplicationWithRelations) {
     const appid = app.appid
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
-    const appsV1Api = this.cluster.makeAppsV1Api(region)
+    const appsV1Api = this.cluster.makeAppsV1Api(user)
     try {
-      const namespace = GetApplicationNamespace(region, appid)
-      const res = await appsV1Api.readNamespacedDeployment(appid, namespace)
+      const res = await appsV1Api.readNamespacedDeployment(appid, user.namespace)
       return res.body
     } catch (error) {
       if (error?.response?.body?.reason === 'NotFound') return null
@@ -199,14 +186,13 @@ export class InstanceService {
 
   private async getService(app: ApplicationWithRelations) {
     const appid = app.appid
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
+    assert(user, 'user is required')
 
-    const coreV1Api = this.cluster.makeCoreV1Api(region)
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
     try {
       const serviceName = appid
-      const namespace = GetApplicationNamespace(region, appid)
-      const res = await coreV1Api.readNamespacedService(serviceName, namespace)
+      const res = await coreV1Api.readNamespacedService(serviceName, user.namespace)
       return res.body
     } catch (error) {
       if (error?.response?.body?.reason === 'NotFound') return null
@@ -230,8 +216,7 @@ export class InstanceService {
     app: ApplicationWithRelations,
     labels: Record<string, string>,
   ): Promise<V1DeploymentSpec> {
-    const appid = app.appid
-    const region = app.region
+    const { appid, region, user} = app
     assert(region, 'region is required')
 
     // prepare params
@@ -250,37 +235,32 @@ export class InstanceService {
     const dedicatedDatabase = await this.dedicatedDatabaseService.findOne(appid)
     if (dedicatedDatabase) {
       dbConnectionUri = await this.dedicatedDatabaseService.getConnectionUri(
-        region,
+        user,
         dedicatedDatabase,
-      )
-    } else {
-      const database = await this.databaseService.findOne(appid)
-      dbConnectionUri = this.databaseService.getInternalConnectionUri(
-        region,
-        database,
       )
     }
 
-    const storage = await this.storageService.findOne(appid)
     const NODE_MODULES_PUSH_URL =
       await this.cloudbin.getNodeModulesCachePushUrl(appid)
 
     const NODE_MODULES_PULL_URL =
       await this.cloudbin.getNodeModulesCachePullUrl(appid)
+    
+    const storageConf = await this.cluster.getStorageConf(user)
 
     const env = [
       { name: 'DB_URI', value: dbConnectionUri },
       { name: 'APP_ID', value: appid }, // deprecated, use `APPID` instead
       { name: 'APPID', value: appid },
-      { name: 'OSS_ACCESS_KEY', value: storage.accessKey },
-      { name: 'OSS_ACCESS_SECRET', value: storage.secretKey },
+      { name: 'OSS_ACCESS_KEY', value: storageConf.accessKey },
+      { name: 'OSS_ACCESS_SECRET', value: storageConf.secretKey },
       {
         name: 'OSS_INTERNAL_ENDPOINT',
-        value: region.storageConf.internalEndpoint,
+        value: storageConf.internal
       },
       {
         name: 'OSS_EXTERNAL_ENDPOINT',
-        value: region.storageConf.externalEndpoint,
+        value: storageConf.external
       },
       { name: 'OSS_REGION', value: region.name },
       {
@@ -448,14 +428,12 @@ export class InstanceService {
   ) {
     if (!app.bundle.autoscaling.enable) return null
 
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
     const spec = this.makeHorizontalPodAutoscalerSpec(app)
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(region)
-    const namespace = GetApplicationNamespace(region, app.appid)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
     const res = await hpaV2Api.createNamespacedHorizontalPodAutoscaler(
-      namespace,
+      user.namespace,
       {
         apiVersion: 'autoscaling/v2',
         kind: 'HorizontalPodAutoscaler',
@@ -472,17 +450,15 @@ export class InstanceService {
 
   private async getHorizontalPodAutoscaler(app: ApplicationWithRelations) {
     const appid = app.appid
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(region)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
 
     try {
       const hpaName = appid
-      const namespace = GetApplicationNamespace(region, appid)
       const res = await hpaV2Api.readNamespacedHorizontalPodAutoscaler(
         hpaName,
-        namespace,
+        user.namespace,
       )
       return res.body
     } catch (error) {
@@ -565,11 +541,9 @@ export class InstanceService {
     oldHpa: V2HorizontalPodAutoscaler,
   ) {
     const appid = app.appid
-    const region = app.region
-    assert(region, 'region is required')
+    const user = app.user
 
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(region)
-    const namespace = GetApplicationNamespace(region, appid)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
 
     const hpa = oldHpa
 
@@ -577,7 +551,7 @@ export class InstanceService {
       if (!hpa) return
       await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(
         app.appid,
-        namespace,
+        user.namespace,
       )
       this.logger.log(`delete k8s hpa ${app.appid}`)
     } else {
@@ -585,7 +559,7 @@ export class InstanceService {
         hpa.spec = this.makeHorizontalPodAutoscalerSpec(app)
         await hpaV2Api.replaceNamespacedHorizontalPodAutoscaler(
           app.appid,
-          namespace,
+          user.namespace,
           hpa,
         )
       } else {

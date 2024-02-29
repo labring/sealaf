@@ -21,8 +21,6 @@ import {
   ApplicationBundle,
   ApplicationBundleResource,
 } from './entities/application-bundle'
-import { GroupService } from 'src/group/group.service'
-import { GroupMember } from 'src/group/entities/group-member'
 import { RegionService } from 'src/region/region.service'
 import { assert } from 'console'
 import { Region } from 'src/region/entities/region'
@@ -34,7 +32,6 @@ export class ApplicationService {
   private readonly logger = new Logger(ApplicationService.name)
 
   constructor(
-    private readonly groupService: GroupService,
     private readonly regionService: RegionService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -123,7 +120,6 @@ export class ApplicationService {
         { session },
       )
 
-      await this.groupService.create(appid, userid, appid)
       // commit transaction
       await session.commitTransaction()
     } catch (error) {
@@ -137,39 +133,10 @@ export class ApplicationService {
   async findAllByUser(userid: ObjectId) {
     const db = SystemDatabase.db
 
-    const doc = await db
-      .collection<GroupMember>('GroupMember')
-      .aggregate()
-      .match({
-        uid: userid,
-      })
-      .lookup({
-        from: 'GroupApplication',
-        localField: 'groupId',
-        foreignField: 'groupId',
-        as: 'applications',
-      })
-      .unwind('$applications')
-      .project({
-        _id: 0,
-        appid: '$applications.appid',
-      })
-      .toArray()
-
     const res = db
       .collection<Application>('Application')
       .aggregate()
-      .match({
-        $and: [
-          {
-            $or: [
-              { appid: { $in: doc.map((v) => v.appid) } },
-              { createdBy: userid },
-            ],
-          },
-          { phase: { $ne: ApplicationPhase.Deleted } },
-        ],
-      })
+      .match({ createdBy: userid },)
       .lookup({
         from: 'ApplicationBundle',
         localField: 'appid',
@@ -255,6 +222,13 @@ export class ApplicationService {
         as: 'region',
       })
       .unwind('$region')
+      .lookup({
+        from: 'User',
+        localField: 'createdBy',
+        foreignField: '_id',
+        as: 'user',
+      })
+      .unwind('$user')
       .lookup({
         from: 'ApplicationBundle',
         localField: 'appid',

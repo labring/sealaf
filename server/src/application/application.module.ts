@@ -12,13 +12,10 @@ import { DatabaseModule } from 'src/database/database.module'
 import { GatewayModule } from 'src/gateway/gateway.module'
 import { ApplicationConfigurationService } from './configuration.service'
 import { TriggerService } from 'src/trigger/trigger.service'
-import { WebsiteService } from 'src/website/website.service'
-import { AccountModule } from 'src/account/account.module'
 import { BundleService } from './bundle.service'
 import { ResourceService } from 'src/billing/resource.service'
 import { FunctionRecycleBinService } from 'src/recycle-bin/cloud-function/function-recycle-bin.service'
 import { HttpModule } from '@nestjs/axios'
-import { QuotaService } from 'src/user/quota.service'
 import { SettingService } from 'src/setting/setting.service'
 import { PodService } from './pod.service'
 import { PodController } from './pod.controller'
@@ -28,7 +25,6 @@ import { PodController } from './pod.controller'
     StorageModule,
     DatabaseModule,
     GatewayModule,
-    AccountModule,
     HttpModule,
   ],
   controllers: [
@@ -46,10 +42,8 @@ import { PodController } from './pod.controller'
     EnvironmentVariableService,
     ApplicationConfigurationService,
     TriggerService,
-    WebsiteService,
     BundleService,
     ResourceService,
-    QuotaService,
     SettingService,
     PodService,
   ],

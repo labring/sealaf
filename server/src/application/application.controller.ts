@@ -30,10 +30,8 @@ import {
 } from './dto/update-application.dto'
 import { ApplicationService } from './application.service'
 import { FunctionService } from '../function/function.service'
-import { StorageService } from 'src/storage/storage.service'
 import { RegionService } from 'src/region/region.service'
 import { CreateApplicationDto } from './dto/create-application.dto'
-import { AccountService } from 'src/account/account.service'
 import {
   Application,
   ApplicationPhase,
@@ -46,16 +44,12 @@ import { ObjectId } from 'mongodb'
 import { ApplicationBundle } from './entities/application-bundle'
 import { ResourceService } from 'src/billing/resource.service'
 import { RuntimeDomainService } from 'src/gateway/runtime-domain.service'
-import { BindCustomDomainDto } from 'src/website/dto/update-website.dto'
 import { RuntimeDomain } from 'src/gateway/entities/runtime-domain'
-import { GroupRole, getRoleLevel } from 'src/group/entities/group-member'
-import { GroupRoles } from 'src/group/group-role.decorator'
-import { InjectApplication, InjectGroup, InjectUser } from 'src/utils/decorator'
+import { InjectApplication, InjectUser } from 'src/utils/decorator'
 import { User } from 'src/user/entities/user'
-import { GroupWithRole } from 'src/group/entities/group'
 import { isEqual } from 'lodash'
 import { InstanceService } from 'src/instance/instance.service'
-import { QuotaService } from 'src/user/quota.service'
+import { BindCustomDomainDto } from './dto/bind-custom-domain.dto'
 
 @ApiTags('Application')
 @Controller('applications')
@@ -68,11 +62,8 @@ export class ApplicationController {
     private readonly instance: InstanceService,
     private readonly fn: FunctionService,
     private readonly region: RegionService,
-    private readonly storage: StorageService,
-    private readonly account: AccountService,
     private readonly resource: ResourceService,
     private readonly runtimeDomain: RuntimeDomainService,
-    private readonly quotaServiceTsService: QuotaService,
   ) {}
 
   /**
@@ -117,30 +108,6 @@ export class ApplicationController {
       }
     }
 
-    if (
-      dto.dedicatedDatabase &&
-      !region.databaseConf.dedicatedDatabase.enabled
-    ) {
-      return ResponseUtil.error('dedicated database is not enabled')
-    }
-
-    // check if a user exceeds the resource limit in a region
-    const limitResource = await this.quotaServiceTsService.resourceLimit(
-      user._id,
-      dto.cpu,
-      dto.memory,
-    )
-    if (limitResource) {
-      return ResponseUtil.error(limitResource)
-    }
-
-    // check account balance
-    const account = await this.account.findOne(user._id)
-    const balance = account?.balance || 0
-    if (!isTrialTier && balance < 0) {
-      return ResponseUtil.error(`account balance is not enough`)
-    }
-
     const checkSpec = await this.checkResourceSpecification(dto, regionId)
     if (!checkSpec) {
       return ResponseUtil.error('invalid resource specification')
@@ -183,16 +150,6 @@ export class ApplicationController {
     // DO NOT response this region object to client since it contains sensitive information
     const region = await this.region.findOne(data.regionId)
 
-    // TODO: remove these storage related code to standalone api
-    let storage = {}
-    const storageUser = await this.storage.findOne(appid)
-    if (storageUser) {
-      storage = {
-        endpoint: region.storageConf.externalEndpoint,
-        ...storageUser,
-      }
-    }
-
     // Generate the develop token, it's provided to the client when debugging function
     const expires = 60 * 60 * 24 * 7
     const develop_token = await this.fn.generateRuntimeToken(
@@ -203,13 +160,11 @@ export class ApplicationController {
 
     const res = {
       ...data,
-      storage: storage,
       port: region.gatewayConf.port,
       develop_token: develop_token,
 
       /** This is the redundant field of Region */
       tls: region.gatewayConf.tls.enabled,
-      dedicatedDatabase: region.databaseConf.dedicatedDatabase.enabled,
     }
 
     return ResponseUtil.ok(res)
@@ -220,7 +175,6 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Update application name' })
   @ApiResponseObject(Application)
-  @GroupRoles(GroupRole.Admin)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Patch(':appid/name')
   async updateName(
@@ -242,19 +196,12 @@ export class ApplicationController {
     @Param('appid') appid: string,
     @Body() dto: UpdateApplicationStateDto,
     @InjectApplication() app: Application,
-    @InjectGroup() group: GroupWithRole,
   ) {
     if (dto.state === ApplicationState.Deleted) {
       throw new ForbiddenException('cannot update state to deleted')
     }
     const userid = app.createdBy
 
-    // check account balance
-    const account = await this.account.findOne(userid)
-    const balance = account?.balance || 0
-    if (balance < 0) {
-      return ResponseUtil.error(`account balance is not enough`)
-    }
 
     // check: only running application can restart
     if (
@@ -289,15 +236,6 @@ export class ApplicationController {
       )
     }
 
-    if (
-      [ApplicationState.Stopped, ApplicationState.Running].includes(
-        dto.state,
-      ) &&
-      getRoleLevel(group.role) < getRoleLevel(GroupRole.Admin)
-    ) {
-      return ResponseUtil.error('no permission')
-    }
-
     const doc = await this.application.updateState(appid, dto.state)
     return ResponseUtil.ok(doc)
   }
@@ -307,14 +245,12 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Update application bundle' })
   @ApiResponseObject(ApplicationBundle)
-  @GroupRoles(GroupRole.Admin)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Patch(':appid/bundle')
   async updateBundle(
     @Param('appid') appid: string,
     @Body() dto: UpdateApplicationBundleDto,
     @InjectApplication() app: ApplicationWithRelations,
-    @InjectUser() user: User,
   ) {
     const error = dto.autoscaling.validate()
     if (error) {
@@ -371,16 +307,6 @@ export class ApplicationController {
       return ResponseUtil.error('cannot change database replicas')
     }
 
-    // check if a user exceeds the resource limit in a region
-    const limitResource = await this.quotaServiceTsService.resourceLimit(
-      user._id,
-      dto.cpu,
-      dto.memory,
-      appid,
-    )
-    if (limitResource) {
-      return ResponseUtil.error(limitResource)
-    }
 
     const doc = await this.application.updateBundle(appid, dto, isTrialTier)
 
@@ -433,7 +359,6 @@ export class ApplicationController {
    */
   @ApiResponseObject(RuntimeDomain)
   @ApiOperation({ summary: 'Bind custom domain to application' })
-  @GroupRoles(GroupRole.Admin)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Patch(':appid/domain')
   async bindDomain(
@@ -468,7 +393,6 @@ export class ApplicationController {
    */
   @ApiResponse({ type: ResponseUtil<boolean> })
   @ApiOperation({ summary: 'Check if domain is resolved' })
-  @GroupRoles(GroupRole.Admin)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Post(':appid/domain/resolved')
   async checkResolved(
@@ -488,7 +412,6 @@ export class ApplicationController {
    */
   @ApiResponseObject(RuntimeDomain)
   @ApiOperation({ summary: 'Remove custom domain of application' })
-  @GroupRoles(GroupRole.Admin)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Delete(':appid/domain')
   async remove(@Param('appid') appid: string) {
@@ -510,7 +433,6 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Delete an application' })
   @ApiResponseObject(Application)
-  @GroupRoles(GroupRole.Owner)
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Delete(':appid')
   async delete(
