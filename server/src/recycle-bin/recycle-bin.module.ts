@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common'
 import { FunctionRecycleBinController } from './cloud-function/function-recycle-bin.controller'
 import { FunctionRecycleBinService } from './cloud-function/function-recycle-bin.service'
 import { FunctionService } from 'src/function/function.service'
-import { DatabaseService } from 'src/database/database.service'
 import { JwtService } from '@nestjs/jwt'
 import { TriggerService } from 'src/trigger/trigger.service'
 import { MongoService } from 'src/database/mongo.service'
@@ -16,7 +15,6 @@ import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedica
   controllers: [FunctionRecycleBinController],
   providers: [
     ApplicationService,
-    DatabaseService,
     DedicatedDatabaseService,
     JwtService,
     TriggerService,
