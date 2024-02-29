@@ -1,24 +1,44 @@
 import { AuthenticationService } from './authentication.service'
-import { Body, Controller, Get, Post } from '@nestjs/common'
+import { Body, Controller, Post } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { ApiResponseString, ResponseUtil } from 'src/utils/response'
 
 import { Pat2TokenDto } from './dto/pat2token.dto'
+import { ClusterService } from 'src/region/cluster/cluster.service'
+import { UserService } from 'src/user/user.service'
+import { SigninDto } from './dto/signin.dto'
+import { User } from 'src/user/entities/user'
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthenticationController {
-  constructor(private readonly authService: AuthenticationService) {}
-
-  /**
-   * Auth providers
-   */
-  @ApiOperation({ summary: 'Auth providers' })
+  constructor(
+    private readonly authService: AuthenticationService,
+    private readonly clusterService: ClusterService,
+    private readonly userService: UserService
+  ) { }
+  
+  @ApiOperation({ summary: 'Signin by kubeconfig' })
   @ApiResponse({ type: ResponseUtil })
-  @Get('providers')
-  async getProviders() {
-    const providers = await this.authService.getProviders()
-    return ResponseUtil.ok(providers)
+  @Post('signin')
+  async signin(@Body() dto: SigninDto) {
+    const user = new User()
+    user.kubeconfig = dto.kubeconfig
+    user.username = dto.username
+    user.namespace = dto.namespace
+
+    const api = this.clusterService.makeCoreV1Api(user)
+    try {
+      await api.readNamespace(user.namespace)
+    } catch (e) {
+      return ResponseUtil.error("validate user failed")
+    }
+    const _user = await this.userService.findOneByNamespace(user.namespace)
+    if (!_user) {
+      await this.userService.create(user)
+    }
+    const token = this.authService.getAccessTokenByUser(user)
+    return ResponseUtil.ok({token, user})
   }
 
   /**
