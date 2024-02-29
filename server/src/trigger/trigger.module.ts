@@ -8,7 +8,6 @@ import { HttpModule } from '@nestjs/axios'
 import { CronJobService } from './cron-job.service'
 import { TriggerTaskService } from './trigger-task.service'
 import { FunctionService } from 'src/function/function.service'
-import { DatabaseService } from 'src/database/database.service'
 import { MongoService } from 'src/database/mongo.service'
 import { BundleService } from 'src/application/bundle.service'
 import { FunctionRecycleBinService } from 'src/recycle-bin/cloud-function/function-recycle-bin.service'
@@ -25,7 +24,6 @@ import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedica
     CronJobService,
     TriggerTaskService,
     FunctionService,
-    DatabaseService,
     DedicatedDatabaseService,
     MongoService,
     BundleService,

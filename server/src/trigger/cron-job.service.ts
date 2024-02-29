@@ -2,13 +2,12 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import * as assert from 'node:assert'
 import { RegionService } from 'src/region/region.service'
-import { GetApplicationNamespace } from 'src/utils/getter'
 import { FunctionService } from 'src/function/function.service'
 import { FOREVER_IN_SECONDS, X_LAF_TRIGGER_TOKEN_KEY } from 'src/constants'
 import { TriggerService } from './trigger.service'
 import * as k8s from '@kubernetes/client-node'
 import { CronTrigger, TriggerPhase } from './entities/cron-trigger'
-import { Region } from 'src/region/entities/region'
+import { User } from 'src/user/entities/user'
 
 @Injectable()
 export class CronJobService {
@@ -26,14 +25,13 @@ export class CronJobService {
 
     // get region by appid
     const appid = trigger.appid
-    const region = await this.regionService.findByAppId(appid)
-    assert(region, 'region is required')
+    const user = await this.clusterService.getUserByAppid(appid)
 
     // create cronjob
-    const ns = GetApplicationNamespace(region, appid)
-    const batchApi = this.clusterService.makeBatchV1Api(region)
+    const ns = user.namespace
+    const batchApi = this.clusterService.makeBatchV1Api(user)
     const name = `cron-${trigger._id}`
-    const command = await this.getTriggerCommand(region, trigger)
+    const command = await this.getTriggerCommand(user, trigger)
     const res = await batchApi.createNamespacedCronJob(ns, {
       metadata: {
         name,
@@ -78,10 +76,10 @@ export class CronJobService {
 
   async findOne(trigger: CronTrigger) {
     const appid = trigger.appid
-    const region = await this.regionService.findByAppId(appid)
-    const ns = GetApplicationNamespace(region, appid)
+    const user = await this.clusterService.getUserByAppid(appid)
+    const ns = user.namespace
     try {
-      const batchApi = this.clusterService.makeBatchV1Api(region)
+      const batchApi = this.clusterService.makeBatchV1Api(user)
       const name = `cron-${trigger._id}`
       const res = await batchApi.readNamespacedCronJob(name, ns)
       return res.body
@@ -121,18 +119,18 @@ export class CronJobService {
 
   async delete(trigger: CronTrigger) {
     const appid = trigger.appid
-    const region = await this.regionService.findByAppId(appid)
-    const ns = GetApplicationNamespace(region, appid)
-    const batchApi = this.clusterService.makeBatchV1Api(region)
+    const user = await this.clusterService.getUserByAppid(appid)
+    const ns = user.namespace
+    const batchApi = this.clusterService.makeBatchV1Api(user)
     const name = `cron-${trigger._id}`
     const res = await batchApi.deleteNamespacedCronJob(name, ns)
     return res.body
   }
 
-  private async getTriggerCommand(region: Region, trigger: CronTrigger) {
+  private async getTriggerCommand(user: User, trigger: CronTrigger) {
     const appid = trigger.appid
     const funcName = trigger.target
-    const runtimeUrl = this.funcService.getInClusterRuntimeUrl(region, appid)
+    const runtimeUrl = this.funcService.getInClusterRuntimeUrl(user, appid)
     const invokeUrl = `${runtimeUrl}/${funcName}`
 
     // get trigger token
@@ -148,10 +146,10 @@ export class CronJobService {
 
   private async patchSuspend(trigger: CronTrigger, suspend: boolean) {
     const appid = trigger.appid
-    const region = await this.regionService.findByAppId(appid)
+    const user = await this.clusterService.getUserByAppid(appid)
 
-    const ns = GetApplicationNamespace(region, appid)
-    const batchApi = this.clusterService.makeBatchV1Api(region)
+    const ns = user.namespace
+    const batchApi = this.clusterService.makeBatchV1Api(user)
     const name = `cron-${trigger._id}`
     const body = [{ op: 'replace', path: '/spec/suspend', value: suspend }]
     try {

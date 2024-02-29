@@ -1,6 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiProperty } from '@nestjs/swagger'
 import { ObjectId } from 'mongodb'
-import { UserProfile } from './user-profile'
 
 export class User {
   @ApiProperty({ type: String })
@@ -9,23 +8,15 @@ export class User {
   @ApiProperty()
   username: string
 
-  @ApiPropertyOptional()
-  email?: string
+  @ApiProperty()
+  namespace: string
 
-  @ApiPropertyOptional()
-  phone?: string
-
-  @ApiPropertyOptional()
-  github?: number
+  @ApiProperty()
+  kubeconfig: string
 
   @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
   updatedAt: Date
-}
-
-export class UserWithProfile extends User {
-  @ApiPropertyOptional()
-  profile?: UserProfile
 }
