@@ -1,95 +1,35 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { KubernetesObject, V1Ingress } from '@kubernetes/client-node'
 import * as k8s from '@kubernetes/client-node'
-import { GetApplicationNamespace } from 'src/utils/getter'
 import { compare } from 'fast-json-patch'
 import { GroupVersionKind } from 'src/region/cluster/types'
-import {
-  LABEL_KEY_APP_ID,
-  LABEL_KEY_NAMESPACE_TYPE,
-  LABEL_KEY_USER_ID,
-} from 'src/constants'
-import { ApplicationNamespaceMode, Region } from '../entities/region'
+import { User } from 'src/user/entities/user'
+import { SystemDatabase } from 'src/system-database'
+import { Application } from 'src/application/entities/application'
+import assert from 'node:assert'
+import { delay } from 'lodash'
 
 @Injectable()
 export class ClusterService {
   private readonly logger = new Logger(ClusterService.name)
 
-  /**
-   * Load kubeconfig of region:
-   * - if region kubeconfig is empty, load from default config (in-cluster service account or ~/.kube/config)
-   * - if region kubeconfig is not empty, load from string
-   */
-  loadKubeConfig(region: Region) {
-    const conf = region.clusterConf.kubeconfig
+  async getUserByAppid(appid: string) {
+    const db = SystemDatabase.db
+    const app = await db.collection<Application>('Application').findOne({ appid })
+    if(!app) return null
+    const user = await db.collection<User>('User').findOne({ _id: app.createdBy })
+    return user
+  }
+
+  loadKubeConfig(user: User) {
+    const conf = user.kubeconfig
     const kc = new k8s.KubeConfig()
-
-    // if conf is empty load from default config (in-cluster service account or ~/.kube/config)
-    if (!conf) {
-      kc.loadFromDefault()
-      return kc
-    }
-
-    // if conf is not empty load from string
     kc.loadFromString(conf)
     return kc
   }
 
-  // create app namespace
-  async createAppNamespace(region: Region, appid: string, userid: string) {
-    try {
-      const namespace = new k8s.V1Namespace()
-      namespace.metadata = new k8s.V1ObjectMeta()
-      namespace.metadata.name = GetApplicationNamespace(region, appid)
-      namespace.metadata.labels = {
-        [LABEL_KEY_APP_ID]: appid,
-        [LABEL_KEY_NAMESPACE_TYPE]: 'app',
-        [LABEL_KEY_USER_ID]: userid,
-      }
-      const coreV1Api = this.makeCoreV1Api(region)
-
-      const res = await coreV1Api.createNamespace(namespace)
-      return res.body
-    } catch (err) {
-      this.logger.error(err)
-      this.logger.error(err?.response?.body)
-      throw err
-    }
-  }
-
-  // get app namespace
-  async getAppNamespace(region: Region, appid: string) {
-    try {
-      const coreV1Api = this.makeCoreV1Api(region)
-      const namespace = GetApplicationNamespace(region, appid)
-      const res = await coreV1Api.readNamespace(namespace)
-      return res.body
-    } catch (err) {
-      if (err?.response?.body?.reason === 'NotFound') return null
-      this.logger.error(err)
-      this.logger.error(err?.response?.body)
-      throw err
-    }
-  }
-
-  // remove app namespace
-  async removeAppNamespace(region: Region, appid: string) {
-    if (region.namespaceConf?.mode !== ApplicationNamespaceMode.AppId) return
-
-    try {
-      const coreV1Api = this.makeCoreV1Api(region)
-      const namespace = GetApplicationNamespace(region, appid)
-      const res = await coreV1Api.deleteNamespace(namespace)
-      return res
-    } catch (err) {
-      this.logger.error(err)
-      this.logger.error(err?.response?.body)
-      throw err
-    }
-  }
-
-  async applyYamlString(region: Region, specString: string) {
-    const api = this.makeObjectApi(region)
+  async applyYamlString(user: User, specString: string) {
+    const api = this.makeObjectApi(user)
     const specs: KubernetesObject[] = k8s.loadAllYaml(specString)
     const validSpecs = specs.filter((s) => s && s.kind && s.metadata)
     const created: k8s.KubernetesObject[] = []
@@ -136,8 +76,8 @@ export class ClusterService {
     return created
   }
 
-  async deleteYamlString(region: Region, specString: string) {
-    const api = this.makeObjectApi(region)
+  async deleteYamlString(user: User, specString: string) {
+    const api = this.makeObjectApi(user)
     const specs: k8s.KubernetesObject[] = k8s.loadAllYaml(specString)
     const validSpecs = specs.filter((s) => s && s.kind && s.metadata)
     const deleted: k8s.KubernetesObject[] = []
@@ -157,8 +97,8 @@ export class ClusterService {
     return deleted
   }
 
-  async patchCustomObject(region: Region, spec: KubernetesObject) {
-    const client = this.makeCustomObjectApi(region)
+  async patchCustomObject(user: User, spec: KubernetesObject) {
+    const client = this.makeCustomObjectApi(user)
     const gvk = GroupVersionKind.fromKubernetesObject(spec)
 
     // get the current spec
@@ -196,8 +136,8 @@ export class ClusterService {
     return response.body
   }
 
-  async deleteCustomObject(region: Region, spec: KubernetesObject) {
-    const client = this.makeCustomObjectApi(region)
+  async deleteCustomObject(user: User, spec: KubernetesObject) {
+    const client = this.makeCustomObjectApi(user)
     const gvk = GroupVersionKind.fromKubernetesObject(spec)
 
     const response = await client.deleteNamespacedCustomObject(
@@ -211,8 +151,9 @@ export class ClusterService {
     return response.body
   }
 
-  async getIngress(region: Region, name: string, namespace: string) {
-    const api = this.makeNetworkingApi(region)
+  async getIngress(user: User, name: string) {
+    const api = this.makeNetworkingApi(user)
+    const namespace = user.namespace
 
     try {
       const res = await api.readNamespacedIngress(name, namespace)
@@ -229,52 +170,144 @@ export class ClusterService {
     }
   }
 
-  async createIngress(region: Region, body: V1Ingress) {
+  async createIngress(user: User, body: V1Ingress) {
     body.apiVersion = 'networking.k8s.io/v1'
     body.kind = 'Ingress'
-    const api = this.makeNetworkingApi(region)
+    const api = this.makeNetworkingApi(user)
     const res = await api.createNamespacedIngress(body.metadata.namespace, body)
     return res.body
   }
 
-  async deleteIngress(region: Region, name: string, namespace: string) {
-    const api = this.makeNetworkingApi(region)
+  async deleteIngress(user: User, name: string) {
+    const api = this.makeNetworkingApi(user)
+    const namespace = user.namespace
     const res = await api.deleteNamespacedIngress(name, namespace)
     return res.body
   }
 
-  makeCoreV1Api(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  async getStorageConf(user: User) {
+    const api = this.makeCustomObjectApi(user)
+    const name = user.namespace.replace("ns-", "")
+
+    let status
+    try {
+      const res = await api.getClusterCustomObject("objectstorage.sealos.io", "v1", "objectstorageusers", name)
+      status = (res.body as any)?.status
+    } catch {
+      await api.createClusterCustomObject("objectstorage.sealos.io", "v1", "objectstorageusers", {
+        metadata: {
+          name: name
+        },
+      })
+
+      const watch = new k8s.Watch(this.loadKubeConfig(user))
+      const wait = (timeout: number) => new Promise((resolve,reject) => {
+        watch.watch(`/apis/objectstorage.sealos.io/v1/namespaces/${user.namespace}/objectstorageusers/${name}`, {}, (type, apiObj, watchObj) => {
+          if (type === 'MODIFIED') {
+            resolve(watchObj.status)
+          }
+        }, (err) => reject(err)).then(req => {
+          delay(() => {
+            req.abort()
+            reject("timeout")
+          }, timeout)
+        })
+      })
+
+      status = await wait(5000)
+    }
+
+    assert(status, "storage conf cannot be empty")
+
+    return {
+      accessKey: status.accessKey,
+      secretKey: status.secretKey,
+      external: status.external,
+      internal: status.internal,
+    }
+  }
+
+  async getStorageBucket(user: User, name: string) {
+    const api = this.makeCustomObjectApi(user)
+    const res = await api.getClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", name)
+
+    const status = (res.body as any)?.status
+    assert(status, `bucket ${name} in ${user.namespace} is not ready`)
+
+    return {
+      name: status.name
+    }
+  }
+
+  async createStorageBucket(user: User, name: string, policy: "public" | "readonly" | "private") {
+    const api = this.makeCustomObjectApi(user)
+    await api.createClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", {
+      metadata: {
+        name: name
+      },
+      spec: {
+        policy
+      }
+    })
+
+    const watch = new k8s.Watch(this.loadKubeConfig(user))
+    const wait = (timeout: number) => new Promise((resolve,reject) => {
+      watch.watch(`/apis/objectstorage.sealos.io/v1/namespaces/${user.namespace}/objectstoragebuckets/${name}`, {}, (type, apiObj, watchObj) => {
+        if (type === 'MODIFIED') {
+            resolve(watchObj.status.name)
+        }
+      }, (err) => reject(err)).then(req => {
+        delay(() => {
+          req.abort()
+          reject("timeout")
+        }, timeout)
+      })
+    })
+
+    const bucketName = await wait(5000)
+    return {
+      name: bucketName as string
+    }
+  }
+
+  async deleteStorageBucket(user: User, name: string) {
+    const api = this.makeCustomObjectApi(user)
+    const res = await api.deleteClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", name)
+    return res.body
+  }
+
+  makeCoreV1Api(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.CoreV1Api)
   }
 
-  makeAppsV1Api(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeAppsV1Api(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.AppsV1Api)
   }
 
-  makeBatchV1Api(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeBatchV1Api(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.BatchV1Api)
   }
 
-  makeObjectApi(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeObjectApi(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.KubernetesObjectApi)
   }
 
-  makeCustomObjectApi(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeCustomObjectApi(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.CustomObjectsApi)
   }
 
-  makeHorizontalPodAutoscalingV2Api(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeHorizontalPodAutoscalingV2Api(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.AutoscalingV2Api)
   }
 
-  makeNetworkingApi(region: Region) {
-    const kc = this.loadKubeConfig(region)
+  makeNetworkingApi(user: User) {
+    const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.NetworkingV1Api)
   }
 }
