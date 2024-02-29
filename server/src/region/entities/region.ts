@@ -84,13 +84,9 @@ export class Region {
   @ApiProperty()
   displayName: string
 
-  namespaceConf: RegionNamespaceConf
   clusterConf: RegionClusterConf
   bundleConf: RegionResourceBundleConf
-  databaseConf: RegionDatabaseConf
   gatewayConf: RegionGatewayConf
-  storageConf: RegionStorageConf
-  logServerConf: LogServerConf
   prometheusConf: PrometheusConf
 
   deployManifest: DeployManifest

@@ -38,7 +38,6 @@ export class RegionService {
       name: 1,
       displayName: 1,
       state: 1,
-      dedicatedDatabase: '$databaseConf.dedicatedDatabase.enabled',
     }
 
     const region = await this.db
@@ -55,7 +54,6 @@ export class RegionService {
       displayName: 1,
       state: 1,
       bundles: 1,
-      dedicatedDatabase: '$databaseConf.dedicatedDatabase.enabled',
     }
 
     const regions = await this.db

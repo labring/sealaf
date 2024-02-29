@@ -8,10 +8,6 @@ import {
   ResourceBundle,
   ResourceType,
 } from 'src/billing/entities/resource'
-import {
-  AuthProvider,
-  AuthProviderState,
-} from 'src/authentication/entities/auth-provider'
 import { Setting, SettingKey } from 'src/setting/entities/setting'
 import * as path from 'path'
 import { readFileSync, readdirSync } from 'node:fs'
@@ -24,7 +20,6 @@ export class InitializerService {
   async init() {
     await this.createDefaultRegion()
     await this.createDefaultRuntime()
-    await this.createDefaultAuthProvider()
     await this.createDefaultResourceOptions()
     await this.createDefaultResourceBundles()
     await this.createDefaultSettings()
@@ -37,12 +32,6 @@ export class InitializerService {
     if (existed) {
       this.logger.debug('region already exists')
       return
-    }
-
-    // create default region
-    let mode = ApplicationNamespaceMode.AppId
-    if (ServerConfig.DEFAULT_REGION_NAMESPACE) {
-      mode = ApplicationNamespaceMode.Fixed
     }
 
     const files = readdirSync(path.resolve(__dirname, './deploy-manifest'))
@@ -59,11 +48,6 @@ export class InitializerService {
     const res = await this.db.collection<Region>('Region').insertOne({
       name: 'default',
       displayName: 'Default',
-      namespaceConf: {
-        mode: mode,
-        prefix: '',
-        fixed: ServerConfig.DEFAULT_REGION_NAMESPACE,
-      },
       clusterConf: {
         driver: 'kubernetes',
         kubeconfig: null,
@@ -73,23 +57,6 @@ export class InitializerService {
       bundleConf: {
         cpuRequestLimitRatio: 0.1,
         memoryRequestLimitRatio: 0.5,
-      },
-      databaseConf: {
-        driver: 'mongodb',
-        connectionUri: ServerConfig.DEFAULT_REGION_DATABASE_URL,
-        controlConnectionUri: ServerConfig.DEFAULT_REGION_DATABASE_URL,
-        dedicatedDatabase: {
-          enabled: false,
-        },
-      },
-      storageConf: {
-        driver: 'minio',
-        domain: ServerConfig.DEFAULT_REGION_MINIO_DOMAIN,
-        externalEndpoint: ServerConfig.DEFAULT_REGION_MINIO_EXTERNAL_ENDPOINT,
-        internalEndpoint: ServerConfig.DEFAULT_REGION_MINIO_INTERNAL_ENDPOINT,
-        accessKey: ServerConfig.DEFAULT_REGION_MINIO_ROOT_ACCESS_KEY,
-        secretKey: ServerConfig.DEFAULT_REGION_MINIO_ROOT_SECRET_KEY,
-        controlEndpoint: ServerConfig.DEFAULT_REGION_MINIO_INTERNAL_ENDPOINT,
       },
       gatewayConf: {
         driver: 'nginx',
@@ -102,11 +69,6 @@ export class InitializerService {
           wildcardCertificateSecretName:
             ServerConfig.DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME,
         },
-      },
-      logServerConf: {
-        apiUrl: '',
-        secret: '',
-        databaseUrl: '',
       },
       prometheusConf: {
         apiUrl: ServerConfig.DEFAULT_REGION_PROMETHEUS_URL,
@@ -148,52 +110,6 @@ export class InitializerService {
     return res
   }
 
-  async createDefaultAuthProvider() {
-    // check if exists
-    const existed = await this.db
-      .collection<AuthProvider>('AuthProvider')
-      .countDocuments()
-    if (existed) {
-      this.logger.debug('default auth provider already exists')
-      return
-    }
-
-    // create default auth provider - user-password
-    await this.db.collection<AuthProvider>('AuthProvider').insertOne({
-      name: 'user-password',
-      bind: {
-        password: 'optional',
-        phone: 'optional',
-        email: 'optional',
-      },
-      register: true,
-      default: true,
-      state: AuthProviderState.Enabled,
-      config: { usernameField: 'username', passwordField: 'password' },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    // create auth provider - phone code
-    await this.db.collection<AuthProvider>('AuthProvider').insertOne({
-      name: 'phone',
-      bind: {
-        password: 'optional',
-        phone: 'optional',
-        email: 'optional',
-      },
-      register: true,
-      default: false,
-      state: AuthProviderState.Disabled,
-      config: {
-        alisms: {},
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    this.logger.verbose('Created default auth providers')
-  }
 
   async createDefaultResourceOptions() {
     // check if exists
