@@ -16,7 +16,6 @@ import * as assert from 'node:assert'
 import * as npa from 'npm-package-arg'
 import { CloudFunction } from 'src/function/entities/cloud-function'
 import { compileTs2js } from '../utils/lang'
-import { DatabaseService } from 'src/database/database.service'
 import { DependencyService } from 'src/dependency/dependency.service'
 import { ApplicationService } from '../application/application.service'
 import { ApplicationConfigurationService } from 'src/application/configuration.service'
@@ -35,7 +34,6 @@ interface FindFunctionTemplatesParams {
 export class FunctionTemplateService {
   constructor(
     private readonly environmentVariableService: EnvironmentVariableService,
-    private readonly databaseService: DatabaseService,
     private readonly dependencyService: DependencyService,
     private readonly appService: ApplicationService,
     private readonly confService: ApplicationConfigurationService,
@@ -626,18 +624,8 @@ export class FunctionTemplateService {
       _id: functionTemplate[0].uid,
     })
 
-    if (user.phone && user.username) {
-      if (user.phone == user.username) {
-        user.username =
-          user.username.slice(0, 3) +
-          'x'.repeat(user.username.length - 6) +
-          user.username.slice(-3)
-      }
-    }
-
     functionTemplate[0]['user'] = {
       username: user?.username,
-      email: user?.email,
     }
 
     return functionTemplate
