@@ -1,3 +1,4 @@
+import { ClusterService } from 'src/region/cluster/cluster.service';
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from '../region/region.service'
 import * as assert from 'node:assert'
@@ -22,6 +23,7 @@ export class RuntimeDomainTaskService {
     private readonly runtimeGateway: RuntimeGatewayService,
     private readonly regionService: RegionService,
     private readonly certService: CertificateService,
+    private readonly clusterService: ClusterService,
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -89,6 +91,8 @@ export class RuntimeDomainTaskService {
     const region = await this.regionService.findByAppId(doc.appid)
     assert(region, 'region not found')
 
+    const user = await this.clusterService.getUserByAppid(doc.appid)
+
     // issue ssl certificate
     // Warning: create certificate before ingress, otherwise apisix ingress will not work
     if (doc.customDomain && region.gatewayConf.tls) {
@@ -96,9 +100,9 @@ export class RuntimeDomainTaskService {
       const waitingTime = Date.now() - doc.updatedAt.getTime()
 
       // create custom domain certificate
-      let cert = await this.certService.getRuntimeCertificate(region, doc)
+      let cert = await this.certService.getRuntimeCertificate(user, doc)
       if (!cert) {
-        cert = await this.certService.createRuntimeCertificate(region, doc)
+        cert = await this.certService.createRuntimeCertificate(region, user, doc)
         this.logger.log(`create runtime domain certificate: ${doc.appid}`)
         // return to wait for cert to be ready
         return await this.relock(doc.appid, waitingTime)
@@ -114,7 +118,7 @@ export class RuntimeDomainTaskService {
     }
 
     // create ingress if not exists
-    const ingress = await this.runtimeGateway.getIngress(region, doc)
+    const ingress = await this.runtimeGateway.getIngress(doc)
     if (!ingress) {
       const res = await this.runtimeGateway.createIngress(region, doc)
       this.logger.log('runtime default ingress created: ' + doc.appid)
@@ -161,11 +165,12 @@ export class RuntimeDomainTaskService {
     const region = await this.regionService.findByAppId(doc.appid)
     assert(region, 'region not found')
 
-    // delete ingress if exists
+    const user = await this.clusterService.getUserByAppid(doc.appid)
 
-    const ingress = await this.runtimeGateway.getIngress(region, doc)
+    // delete ingress if exists
+    const ingress = await this.runtimeGateway.getIngress(doc)
     if (ingress) {
-      const res = await this.runtimeGateway.deleteIngress(region, doc)
+      const res = await this.runtimeGateway.deleteIngress(doc)
       this.logger.log('runtime ingress deleted: ' + doc.appid)
       this.logger.debug(JSON.stringify(res))
     }
@@ -180,9 +185,9 @@ export class RuntimeDomainTaskService {
       // delete app custom certificate if custom domain is set
       const waitingTime = Date.now() - doc.updatedAt.getTime()
 
-      const cert = await this.certService.getRuntimeCertificate(region, doc)
+      const cert = await this.certService.getRuntimeCertificate(user, doc)
       if (cert) {
-        await this.certService.deleteRuntimeCertificate(region, doc)
+        await this.certService.deleteRuntimeCertificate(user, doc)
         this.logger.log(`delete runtime custom domain cert: ${doc.appid}`)
         // return to wait for cert to be deleted
         return await this.relock(doc.appid, waitingTime)

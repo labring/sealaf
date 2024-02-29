@@ -3,7 +3,6 @@ import { Injectable, Logger } from '@nestjs/common'
 import { LABEL_KEY_APP_ID } from 'src/constants'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { Region } from 'src/region/entities/region'
-import { GetApplicationNamespace } from 'src/utils/getter'
 import { RuntimeDomain } from '../entities/runtime-domain'
 import { CertificateService } from '../certificate.service'
 
@@ -19,16 +18,15 @@ export class RuntimeGatewayService {
     return domain.appid
   }
 
-  async getIngress(region: Region, domain: RuntimeDomain) {
+  async getIngress(domain: RuntimeDomain) {
     // use appid as ingress name of runtime directly
     const appid = domain.appid
     const name = this.getIngressName(domain)
-    const namespace = GetApplicationNamespace(region, appid)
+    const user = await this.clusterService.getUserByAppid(appid)
 
     const ingress = await this.clusterService.getIngress(
-      region,
+      user,
       name,
-      namespace,
     )
 
     return ingress
@@ -36,7 +34,8 @@ export class RuntimeGatewayService {
 
   async createIngress(region: Region, runtimeDomain: RuntimeDomain) {
     const appid = runtimeDomain.appid
-    const namespace = GetApplicationNamespace(region, appid)
+    const user = await this.clusterService.getUserByAppid(appid)
+    const namespace = user.namespace
 
     // use appid as ingress name of runtime directly
     const name = `${appid}`
@@ -98,17 +97,17 @@ export class RuntimeGatewayService {
       spec: { ingressClassName, rules, tls },
     }
 
-    const res = await this.clusterService.createIngress(region, ingressBody)
+    const res = await this.clusterService.createIngress(user, ingressBody)
     return res
   }
 
-  async deleteIngress(region: Region, domain: RuntimeDomain) {
+  async deleteIngress(domain: RuntimeDomain) {
     const appid = domain.appid
+    const user = await this.clusterService.getUserByAppid(appid)
     const name = this.getIngressName(domain)
-    const namespace = GetApplicationNamespace(region, appid)
 
     // delete ingress
-    const res = await this.clusterService.deleteIngress(region, name, namespace)
+    const res = await this.clusterService.deleteIngress(user, name)
     return res
   }
 }
