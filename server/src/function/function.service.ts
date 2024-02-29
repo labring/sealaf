@@ -10,7 +10,6 @@ import { UpdateFunctionDto } from './dto/update-function.dto'
 import * as assert from 'node:assert'
 import { JwtService } from '@nestjs/jwt'
 import { CompileFunctionDto } from './dto/compile-function.dto'
-import { DatabaseService } from 'src/database/database.service'
 import { SystemDatabase } from 'src/system-database'
 import { ClientSession, ObjectId } from 'mongodb'
 import { CloudFunction } from './entities/cloud-function'
@@ -22,9 +21,8 @@ import { UpdateFunctionDebugDto } from './dto/update-function-debug.dto'
 import { FunctionRecycleBinService } from 'src/recycle-bin/cloud-function/function-recycle-bin.service'
 import { HttpService } from '@nestjs/axios'
 import { RegionService } from 'src/region/region.service'
-import { GetApplicationNamespace } from 'src/utils/getter'
-import { Region } from 'src/region/entities/region'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
+import { User } from 'src/user/entities/user'
 
 @Injectable()
 export class FunctionService {
@@ -32,7 +30,6 @@ export class FunctionService {
   private readonly db = SystemDatabase.db
 
   constructor(
-    private readonly databaseService: DatabaseService,
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
     private readonly jwtService: JwtService,
     private readonly triggerService: TriggerService,
@@ -237,9 +234,7 @@ export class FunctionService {
   }
 
   async publish(func: CloudFunction, oldFuncName?: string) {
-    const { db, client } =
-      (await this.dedicatedDatabaseService.findAndConnect(func.appid)) ||
-      (await this.databaseService.findAndConnect(func.appid))
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(func.appid)
 
     const session = client.startSession()
     try {
@@ -258,9 +253,7 @@ export class FunctionService {
   }
 
   async publishMany(funcs: CloudFunction[]) {
-    const { db, client } =
-      (await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)) ||
-      (await this.databaseService.findAndConnect(funcs[0].appid))
+    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)
 
     const session = client.startSession()
     try {
@@ -277,9 +270,7 @@ export class FunctionService {
   }
 
   async publishFunctionTemplateItems(funcs: CloudFunction[]) {
-    const { db, client } =
-      (await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)) ||
-      (await this.databaseService.findAndConnect(funcs[0].appid))
+    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)
 
     const session = client.startSession()
     try {
@@ -295,9 +286,7 @@ export class FunctionService {
   }
 
   async unpublish(appid: string, name: string) {
-    const { db, client } =
-      (await this.dedicatedDatabaseService.findAndConnect(appid)) ||
-      (await this.databaseService.findAndConnect(appid))
+    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(appid)
     try {
       const coll = db.collection(CN_PUBLISHED_FUNCTIONS)
       await coll.deleteOne({ name })
@@ -355,46 +344,15 @@ export class FunctionService {
    * @param appid
    * @returns
    */
-  getInClusterRuntimeUrl(region: Region, appid: string) {
+  getInClusterRuntimeUrl(user: User, appid: string) {
     const serviceName = appid
-    const namespace = GetApplicationNamespace(region, appid)
+    const namespace = user.namespace
     const appAddress = `${serviceName}.${namespace}:8000`
 
     const url = `http://${appAddress}`
     return url
   }
 
-  async getLogs(
-    appid: string,
-    params: {
-      page: number
-      pageSize: number
-      requestId?: string
-      functionName?: string
-    },
-  ) {
-    const region = await this.regionService.findByAppId(appid)
-    if (!region?.logServerConf?.apiUrl) {
-      return {
-        data: [],
-        total: 0,
-      }
-    }
-
-    const res = await this.httpService.axiosRef.get(
-      `${region.logServerConf.apiUrl}/function/log`,
-      {
-        params: {
-          ...params,
-          appid,
-        },
-        headers: {
-          'x-token': region.logServerConf.secret,
-        },
-      },
-    )
-    return res.data
-  }
 
   async getHistory(func: CloudFunction) {
     const history = await this.db
