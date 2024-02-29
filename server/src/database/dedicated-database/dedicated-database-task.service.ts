@@ -9,6 +9,7 @@ import { DedicatedDatabaseService } from './dedicated-database.service'
 import { TASK_LOCK_INIT_TIME } from 'src/constants'
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from 'src/region/region.service'
+import { ClusterService } from 'src/region/cluster/cluster.service'
 
 @Injectable()
 export class DedicatedDatabaseTaskService {
@@ -18,6 +19,7 @@ export class DedicatedDatabaseTaskService {
 
   constructor(
     private readonly regionService: RegionService,
+    private readonly clusterService: ClusterService,
     private readonly dbService: DedicatedDatabaseService,
   ) {}
 
@@ -63,10 +65,11 @@ export class DedicatedDatabaseTaskService {
     const appid = data.appid
 
     const region = await this.regionService.findByAppId(appid)
-    let manifest = await this.dbService.getDeployManifest(region, appid)
+    const user = await this.clusterService.getUserByAppid(appid)
+    let manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     if (!manifest || manifest.spec.componentSpecs[0].replicas === 0) {
-      await this.dbService.applyDeployManifest(region, appid)
+      await this.dbService.applyDeployManifest(region, user, appid)
     }
 
     // if waiting time is more than 5 minutes, stop
@@ -92,7 +95,7 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    manifest = await this.dbService.getDeployManifest(region, appid)
+    manifest = await this.dbService.getDeployManifest(region,user , appid)
     const unavailable = manifest?.status?.phase !== 'Running'
     if (unavailable) {
       await this.relock(appid, waitingTime)
@@ -144,10 +147,11 @@ export class DedicatedDatabaseTaskService {
     const waitingTime = Date.now() - data.updatedAt.getTime()
 
     const region = await this.regionService.findByAppId(appid)
-    const manifest = await this.dbService.getDeployManifest(region, appid)
+    const user = await this.clusterService.getUserByAppid(appid)
+    const manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     if (manifest) {
-      await this.dbService.deleteDeployManifest(region, appid)
+      await this.dbService.deleteDeployManifest(region,user, appid)
       await this.relock(appid, waitingTime)
     }
 
@@ -187,11 +191,12 @@ export class DedicatedDatabaseTaskService {
     const appid = data.appid
 
     const region = await this.regionService.findByAppId(appid)
+    const user = await this.clusterService.getUserByAppid(appid)
     const waitingTime = Date.now() - data.updatedAt.getTime()
 
-    const manifest = await this.dbService.getDeployManifest(region, appid)
+    const manifest = await this.dbService.getDeployManifest(region, user, appid)
     if (manifest && manifest.spec.componentSpecs[0].replicas !== 0) {
-      await this.dbService.applyDeployManifest(region, appid, {
+      await this.dbService.applyDeployManifest(region, user, appid, {
         replicas: 0,
       })
       await this.relock(appid, waitingTime)

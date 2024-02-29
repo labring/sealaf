@@ -18,6 +18,7 @@ import { MongoService } from 'src/database/mongo.service'
 import { MongoAccessor } from 'database-proxy'
 import { ApplicationBundle } from 'src/application/entities/application-bundle'
 import * as assert from 'assert'
+import { User } from 'src/user/entities/user'
 
 const getDedicatedDatabaseName = (appid: string) => appid
 
@@ -48,6 +49,7 @@ export class DedicatedDatabaseService {
 
   async applyDeployManifest(
     region: Region,
+    user: User,
     appid: string,
     patch?: Partial<DedicatedDatabaseSpec>,
   ) {
@@ -56,7 +58,7 @@ export class DedicatedDatabaseService {
       ...spec,
       ...patch,
     })
-    const res = await this.cluster.applyYamlString(region, manifest)
+    const res = await this.cluster.applyYamlString(user, manifest)
     return res
   }
 
@@ -84,14 +86,14 @@ export class DedicatedDatabaseService {
     return res
   }
 
-  async deleteDeployManifest(region: Region, appid: string) {
-    const manifest = await this.getDeployManifest(region, appid)
-    const res = await this.cluster.deleteCustomObject(region, manifest)
+  async deleteDeployManifest(region: Region, user: User, appid: string) {
+    const manifest = await this.getDeployManifest(region, user, appid)
+    const res = await this.cluster.deleteCustomObject(user, manifest)
     return res
   }
 
-  async getDeployManifest(region: Region, appid: string) {
-    const api = this.cluster.makeObjectApi(region)
+  async getDeployManifest(region: Region,user: User, appid: string) {
+    const api = this.cluster.makeObjectApi(user)
     const emptyManifest = this.makeDeployManifest(region, appid)
     const specs = loadAllYaml(emptyManifest)
     assert(
@@ -157,21 +159,9 @@ export class DedicatedDatabaseService {
     return res.value
   }
 
-  getDatabaseNamespace(region: Region, appid: string) {
-    const emptyManifest = this.makeDeployManifest(region, appid)
-    const specs = loadAllYaml(emptyManifest)
-    assert(
-      specs && specs.length > 0,
-      'the deploy manifest of database should not be empty',
-    )
-    if (!specs || specs.length === 0) return null
-    const spec = specs[0]
-    return spec.metadata.namespace
-  }
-
-  async getConnectionUri(region: Region, database: DedicatedDatabase) {
-    const api = this.cluster.makeCoreV1Api(region)
-    const namespace = this.getDatabaseNamespace(region, database.appid)
+  async getConnectionUri(user: User, database: DedicatedDatabase) {
+    const api = this.cluster.makeCoreV1Api(user)
+    const namespace = user.namespace
     const name = getDedicatedDatabaseName(database.appid)
     const secretName = `${name}-conn-credential`
     const srv = await api.readNamespacedSecret(secretName, namespace)
@@ -209,8 +199,8 @@ export class DedicatedDatabaseService {
     const database = await this.findOne(appid)
     if (!database) return null
 
-    const region = await this.regionService.findByAppId(appid)
-    const connectionUri = await this.getConnectionUri(region, database)
+    const user = await this.cluster.getUserByAppid(appid)
+    const connectionUri = await this.getConnectionUri(user, database)
 
     const client = await this.mongoService.connectDatabase(
       connectionUri,
