@@ -1,8 +1,8 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
+import { ClusterService } from 'src/region/cluster/cluster.service'
 import { PrometheusConf } from 'src/region/entities/region'
 import { RegionService } from 'src/region/region.service'
-import { GetApplicationNamespace } from 'src/utils/getter'
 
 const requestConfig = {
   retryAttempts: 5,
@@ -61,6 +61,7 @@ export class MonitorService {
   constructor(
     private readonly httpService: HttpService,
     private readonly regionService: RegionService,
+    private readonly clusterService: ClusterService
   ) {}
   private readonly logger = new Logger(MonitorService.name)
 
@@ -76,11 +77,13 @@ export class MonitorService {
       this.logger.warn('Metrics not available for no endpoint')
       return {}
     }
+    const user = await this.clusterService.getUserByAppid(appid)
+    const namespace = user.namespace
 
     const opts = {
       appid,
       selector: 'pod',
-      namespace: GetApplicationNamespace(region, appid),
+      namespace: namespace,
       pods: appid + '.+',
     }
     const data = {}
