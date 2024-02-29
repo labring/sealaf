@@ -14,14 +14,6 @@ export class ServerConfig {
     return process.env.DATABASE_URL
   }
 
-  static get NOTIFICATION_CENTER_URL() {
-    return process.env.NOTIFICATION_CENTER_URL
-  }
-
-  static get NOTIFICATION_CENTER_TOKEN() {
-    return process.env.NOTIFICATION_CENTER_TOKEN || ''
-  }
-
   static get JWT_SECRET() {
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is not defined')
@@ -47,51 +39,8 @@ export class ServerConfig {
     return process.env.DISABLED_GATEWAY_TASK === 'true'
   }
 
-  static get DISABLED_BUCKET_DOMAIN_TASK() {
-    return process.env.DISABLED_BUCKET_DOMAIN_TASK === 'true'
-  }
-
   static get DISABLED_TRIGGER_TASK() {
     return process.env.DISABLED_TRIGGER_TASK === 'true'
-  }
-
-  static get DISABLED_STORAGE_TASK() {
-    return process.env.DISABLED_STORAGE_TASK === 'true'
-  }
-
-  static get DISABLED_STORAGE_USER_TASK() {
-    return process.env.DISABLED_STORAGE_USER_TASK === 'true'
-  }
-
-  static get DISABLED_BILLING_CREATION_TASK() {
-    return process.env.DISABLED_BILLING_CREATION_TASK === 'true'
-  }
-
-  static get DISABLED_BILLING_PAYMENT_TASK() {
-    return process.env.DISABLED_BILLING_PAYMENT_TASK === 'true'
-  }
-
-  static get DISABLED_DATABASE_USAGE_CAPTURE_TASK() {
-    return process.env.DISABLED_DATABASE_USAGE_CAPTURE_TASK === 'true'
-  }
-
-  static get DISABLED_DATABASE_USAGE_LIMIT_TASK() {
-    return process.env.DISABLED_DATABASE_USAGE_LIMIT_TASK === 'true'
-  }
-
-  static get DISABLED_STORAGE_USAGE_CAPTURE_TASK() {
-    return process.env.DISABLED_STORAGE_USAGE_CAPTURE_TASK === 'true'
-  }
-
-  static get DISABLED_STORAGE_USAGE_LIMIT_TASK() {
-    return process.env.DISABLED_STORAGE_USAGE_LIMIT_TASK === 'true'
-  }
-
-  static get DISABLE_NOTIFICATION_TASK() {
-    if (!process.env.DISABLE_NOTIFICATION_TASK) {
-      return true
-    }
-    return process.env.DISABLE_NOTIFICATION_TASK === 'true'
   }
 
   static get APPID_LENGTH(): number {
@@ -130,15 +79,6 @@ export class ServerConfig {
     return process.env.API_SERVER_URL || 'http://localhost:3000'
   }
 
-  /** default region conf */
-  static get DEFAULT_REGION_NAMESPACE() {
-    return process.env.DEFAULT_REGION_NAMESPACE
-  }
-
-  static get DEFAULT_REGION_DATABASE_URL() {
-    return process.env.DEFAULT_REGION_DATABASE_URL
-  }
-
   static get DEFAULT_REGION_RUNTIME_DOMAIN() {
     if (!process.env.DEFAULT_REGION_RUNTIME_DOMAIN) {
       throw new Error('DEFAULT_REGION_RUNTIME_DOMAIN is not defined')
@@ -161,26 +101,6 @@ export class ServerConfig {
     return process.env.DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME
   }
 
-  static get DEFAULT_REGION_MINIO_DOMAIN() {
-    return process.env.DEFAULT_REGION_MINIO_DOMAIN
-  }
-
-  static get DEFAULT_REGION_MINIO_EXTERNAL_ENDPOINT() {
-    return process.env.DEFAULT_REGION_MINIO_EXTERNAL_ENDPOINT
-  }
-
-  static get DEFAULT_REGION_MINIO_INTERNAL_ENDPOINT() {
-    return process.env.DEFAULT_REGION_MINIO_INTERNAL_ENDPOINT
-  }
-
-  static get DEFAULT_REGION_MINIO_ROOT_ACCESS_KEY() {
-    return process.env.DEFAULT_REGION_MINIO_ROOT_ACCESS_KEY
-  }
-
-  static get DEFAULT_REGION_MINIO_ROOT_SECRET_KEY() {
-    return process.env.DEFAULT_REGION_MINIO_ROOT_SECRET_KEY
-  }
-
   static get DEFAULT_REGION_PROMETHEUS_URL() {
     return process.env.DEFAULT_REGION_PROMETHEUS_URL
   }
@@ -191,33 +111,18 @@ export class ServerConfig {
   }
 }
 
-export const LABEL_KEY_USER_ID = 'laf.dev/user.id'
 export const LABEL_KEY_APP_ID = 'laf.dev/appid'
-export const LABEL_KEY_NAMESPACE_TYPE = 'laf.dev/namespace.type'
-export const LABEL_KEY_NODE_TYPE = 'laf.dev/node.type'
-export enum NodeType {
-  Runtime = 'runtime',
-  Database = 'database',
-  Storage = 'storage',
-}
 
 // Runtime constants
 export const HTTP_METHODS = ['HEAD', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH']
 
 export const CN_PUBLISHED_FUNCTIONS = '__functions__'
-export const CN_PUBLISHED_POLICIES = '__policies__'
 export const CN_PUBLISHED_CONF = '__conf__'
-export const CN_PUBLISHED_WEBSITE_HOSTING = '__website_hosting__'
 
 export const X_LAF_TRIGGER_TOKEN_KEY = 'x-laf-trigger-token'
 export const X_LAF_DEVELOP_TOKEN_KEY = 'x-laf-develop-token'
 export const APPLICATION_SECRET_KEY = 'SERVER_SECRET'
 
-// Cluster constants
-export const MINIO_COMMON_USER_GROUP = 'laf_owner_by_prefix_group'
-export const MINIO_COMMON_USER_POLICY = 'laf_owner_by_prefix'
-export const MINIO_READONLY_USER_GROUP = 'laf_owner_readonly_by_prefix_group'
-export const MINIO_READONLY_USER_POLICY = 'laf_owner_readonly_by_prefix'
 // Date & times
 export const ONE_DAY_IN_SECONDS = 60 * 60 * 24 // 1 day in seconds
 export const SEVEN_DAYS_IN_SECONDS = 60 * 60 * 24 * 7 // 7 days in seconds
@@ -231,21 +136,6 @@ export const MILLISECONDS_PER_MINUTE = 60 * 1000 // 1 minute in milliseconds
 export const CPU_UNIT = 1000
 export const MB = 1024 * 1024
 export const GB = 1024 * MB
-
-// auth constants
-export const PHONE_AUTH_PROVIDER_NAME = 'phone'
-export const PASSWORD_AUTH_PROVIDER_NAME = 'user-password'
-export const EMAIL_AUTH_PROVIDER_NAME = 'email'
-export const GITHUB_AUTH_PROVIDER_NAME = 'github'
-
-// Sms constants
-export const ALISMS_KEY = 'alisms'
-export const LIMIT_CODE_FREQUENCY = 60 * 1000 // 60 seconds (in milliseconds)
-export const LIMIT_CODE_PER_IP_PER_DAY = 30 // 30 times
-export const CODE_VALIDITY = 10 * 60 * 1000 // 10 minutes (in milliseconds)
-
-// Github constants
-export const GITHUB_SIGNIN_TOKEN_VALIDITY = 5 * 60 * 1000
 
 // Recycle bin constants
 export const STORAGE_LIMIT = 1000 // 1000 items
