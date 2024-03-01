@@ -23,7 +23,6 @@ import { DedicatedDatabaseMonitorController } from './monitor/monitor.controller
     MongoService,
     ApplicationService,
     BundleService,
-    SettingService,
     DedicatedDatabaseService,
     DedicatedDatabaseTaskService,
     DedicatedDatabaseMonitorService,

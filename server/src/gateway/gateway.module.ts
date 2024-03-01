@@ -4,10 +4,9 @@ import { HttpModule } from '@nestjs/axios'
 import { RuntimeDomainTaskService } from './runtime-domain-task.service'
 import { CertificateService } from './certificate.service'
 import { RuntimeGatewayService } from './ingress/runtime-ingress.service'
-import { DatabaseModule } from 'src/database/database.module'
 
 @Module({
-  imports: [HttpModule, DatabaseModule],
+  imports: [HttpModule],
   providers: [
     RuntimeDomainService,
     RuntimeDomainTaskService,
