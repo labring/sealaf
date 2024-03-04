@@ -13,12 +13,6 @@ export class ApplicationBundleResource {
   requestCPU: number
   requestMemory: number
 
-  @ApiProperty({ example: 1024 })
-  databaseCapacity: number
-
-  @ApiProperty({ example: 1024 })
-  storageCapacity: number
-
   @ApiProperty({ example: 100 })
   limitCountOfCloudFunction: number
 

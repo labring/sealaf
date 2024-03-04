@@ -33,11 +33,11 @@ export class AuthenticationController {
     } catch (e) {
       return ResponseUtil.error("validate user failed")
     }
-    const _user = await this.userService.findOneByNamespace(user.namespace)
+    let _user = await this.userService.findOneByNamespace(user.namespace)
     if (!_user) {
-      await this.userService.create(user)
+      _user = await this.userService.create(user)
     }
-    const token = this.authService.getAccessTokenByUser(user)
+    const token = this.authService.getAccessTokenByUser(_user)
     return ResponseUtil.ok({token, user})
   }
 

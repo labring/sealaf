@@ -25,14 +25,6 @@ export class BillingService {
     assert(groupedOptions[ResourceType.CPU], 'cpu option not found')
     assert(groupedOptions[ResourceType.Memory], 'memory option not found')
     assert(
-      groupedOptions[ResourceType.StorageCapacity],
-      'storage capacity option not found',
-    )
-    assert(
-      groupedOptions[ResourceType.DatabaseCapacity],
-      'database capacity option not found',
-    )
-    assert(
       groupedOptions[ResourceType.DedicatedDatabaseCPU],
       'dedicated database cpu option not found',
     )
@@ -56,18 +48,6 @@ export class BillingService {
     // calculate memory price
     const memoryOption = groupedOptions[ResourceType.Memory]
     const memoryPrice = new Decimal(memoryOption.price).mul(dto.memory)
-
-    // calculate storage capacity price
-    const storageOption = groupedOptions[ResourceType.StorageCapacity]
-    const storagePrice = new Decimal(storageOption.price).mul(
-      dto.storageCapacity,
-    )
-
-    // calculate database capacity price
-    const databaseOption = groupedOptions[ResourceType.DatabaseCapacity]
-    const databasePrice = new Decimal(databaseOption.price).mul(
-      dto.databaseCapacity || 0,
-    )
 
     const ddbCPUOption = groupedOptions[ResourceType.DedicatedDatabaseCPU]
     const ddbCPUPrice = dto.dedicatedDatabase
@@ -96,15 +76,11 @@ export class BillingService {
     // calculate total price
     const totalPrice = cpuPrice
       .add(memoryPrice)
-      .add(storagePrice)
-      .add(databasePrice)
       .add(ddbTotalPrice)
 
     return {
       cpu: cpuPrice.toNumber(),
       memory: memoryPrice.toNumber(),
-      storageCapacity: storagePrice.toNumber(),
-      databaseCapacity: databasePrice.toNumber(),
       dedicatedDatabase: {
         cpu: ddbCPUPrice.toNumber(),
         memory: ddbMemoryPrice.toNumber(),

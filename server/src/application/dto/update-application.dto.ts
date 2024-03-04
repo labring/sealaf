@@ -66,16 +66,6 @@ export class UpdateApplicationBundleDto {
   @IsInt()
   memory: number
 
-  @ApiProperty({ example: 2048 })
-  @IsInt()
-  @IsOptional()
-  databaseCapacity?: number
-
-  @ApiProperty({ example: 4096 })
-  @IsNotEmpty()
-  @IsInt()
-  storageCapacity: number
-
   @ApiProperty({ type: CreateAutoscalingDto })
   @ValidateNested()
   @Type(() => CreateAutoscalingDto)
@@ -83,17 +73,11 @@ export class UpdateApplicationBundleDto {
 
   @ApiProperty({ type: CreateDedicatedDatabaseDto })
   @ValidateNested()
-  @IsOptional()
+  @IsNotEmpty()
   @Type(() => CreateDedicatedDatabaseDto)
   dedicatedDatabase?: CreateDedicatedDatabaseDto
 
   validate() {
-    if (!this.dedicatedDatabase && !this.databaseCapacity) {
-      return 'databaseCapacity or dedicatedDatabase must be provided'
-    }
-    if (this.databaseCapacity && this.dedicatedDatabase) {
-      return 'databaseCapacity or dedicatedDatabase must be specified only one'
-    }
     return null
   }
 }

@@ -12,7 +12,6 @@ export class CloudBinBucketService {
   private readonly db = SystemDatabase.db
 
   constructor(
-    // private readonly storageService: StorageService,
     private readonly regionService: RegionService,
     private readonly clusterService: ClusterService
   ) {}

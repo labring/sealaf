@@ -18,12 +18,6 @@ export class CalculatePriceResultDto {
   @ApiProperty({ example: 0.036 })
   memory: number
 
-  @ApiProperty({ example: 0.036 })
-  storageCapacity: number
-
-  @ApiProperty({ example: 0.036 })
-  databaseCapacity: number
-
   @ApiProperty({ example: 0.18 })
   total: number
 }

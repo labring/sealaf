@@ -6,7 +6,7 @@ import { GroupVersionKind } from 'src/region/cluster/types'
 import { User } from 'src/user/entities/user'
 import { SystemDatabase } from 'src/system-database'
 import { Application } from 'src/application/entities/application'
-import assert from 'node:assert'
+import * as assert from 'node:assert'
 import { delay } from 'lodash'
 
 @Injectable()
@@ -43,6 +43,8 @@ export class ClusterService {
       spec.metadata.annotations[
         'kubectl.kubernetes.io/last-applied-configuration'
       ] = JSON.stringify(spec)
+      spec.metadata.namespace = user.namespace
+
 
       try {
         // try to get the resource, if it does not exist an error will be thrown and we will end up in the catch
@@ -191,12 +193,15 @@ export class ClusterService {
 
     let status
     try {
-      const res = await api.getClusterCustomObject("objectstorage.sealos.io", "v1", "objectstorageusers", name)
+      const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstorageusers", name)
       status = (res.body as any)?.status
     } catch {
-      await api.createClusterCustomObject("objectstorage.sealos.io", "v1", "objectstorageusers", {
+      await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstorageusers", {
+        apiVersion: "objectstorage.sealos.io/v1",
+        kind: "ObjectStorageUser",
         metadata: {
-          name: name
+          name,
+          namespace: user.namespace
         },
       })
 
@@ -222,14 +227,14 @@ export class ClusterService {
     return {
       accessKey: status.accessKey,
       secretKey: status.secretKey,
-      external: status.external,
-      internal: status.internal,
+      external: "https://" + status.external,
+      internal: "http://" + status.internal,
     }
   }
 
   async getStorageBucket(user: User, name: string) {
     const api = this.makeCustomObjectApi(user)
-    const res = await api.getClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", name)
+    const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstoragebuckets", name)
 
     const status = (res.body as any)?.status
     assert(status, `bucket ${name} in ${user.namespace} is not ready`)
@@ -241,9 +246,12 @@ export class ClusterService {
 
   async createStorageBucket(user: User, name: string, policy: "public" | "readonly" | "private") {
     const api = this.makeCustomObjectApi(user)
-    await api.createClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", {
+    await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstoragebuckets", {
+      apiVersion: "objectstorage.sealos.io/v1",
+      kind: "ObjectStorageBucket",
       metadata: {
-        name: name
+        name,
+        namespace: user.namespace
       },
       spec: {
         policy

@@ -59,7 +59,6 @@ export class ApplicationTaskService {
   /**
    * Phase `Creating`:
    * - create namespace
-   * - create storage user
    * - create runtime domain
    * - create database & user
    * - move phase `Creating` to `Created`
@@ -126,7 +125,6 @@ export class ApplicationTaskService {
    * - delete runtime domain
    * - delete bucket domains
    * - delete database (mongo db)
-   * - delete storage (minio buckets & user)
    * - delete namespace
    * - move phase `Deleting` to `Deleted`
    */

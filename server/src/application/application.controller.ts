@@ -277,12 +277,6 @@ export class ApplicationController {
     }
 
     const origin = app.bundle
-    if (
-      (origin.resource.dedicatedDatabase?.limitCPU && dto.databaseCapacity) ||
-      (origin.resource.databaseCapacity && dto.dedicatedDatabase?.cpu)
-    ) {
-      return ResponseUtil.error('cannot change database type')
-    }
 
     const checkSpec = await this.checkResourceSpecification(dto, regionId)
     if (!checkSpec) {
@@ -462,13 +456,6 @@ export class ApplicationController {
           return option.specs.some((spec) => spec.value === dto.cpu)
         case 'memory':
           return option.specs.some((spec) => spec.value === dto.memory)
-        case 'databaseCapacity':
-          if (!dto.databaseCapacity) return true
-          return option.specs.some(
-            (spec) => spec.value === dto.databaseCapacity,
-          )
-        case 'storageCapacity':
-          return option.specs.some((spec) => spec.value === dto.storageCapacity)
         // dedicated database
         case 'dedicatedDatabaseCPU':
           return (

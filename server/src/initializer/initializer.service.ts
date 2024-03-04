@@ -155,35 +155,6 @@ export class InitializerService {
       },
       {
         regionId: region._id,
-        type: ResourceType.DatabaseCapacity,
-        price: 0.0,
-        specs: [
-          { label: '1 GB', value: 1024 },
-          { label: '4 GB', value: 4096 },
-          { label: '16 GB', value: 16384 },
-          { label: '64 GB', value: 65536 },
-          { label: '256 GB', value: 262144 },
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        regionId: region._id,
-        type: ResourceType.StorageCapacity,
-        price: 0.0,
-        specs: [
-          { label: '1 GB', value: 1024 },
-          { label: '4 GB', value: 4096 },
-          { label: '16 GB', value: 16384 },
-          { label: '64 GB', value: 65536 },
-          { label: '256 GB', value: 262144 },
-          { label: '1 TB', value: 1048576 },
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        regionId: region._id,
         type: ResourceType.NetworkTraffic,
         price: 0.8,
         specs: [],
@@ -273,8 +244,6 @@ export class InitializerService {
         spec: {
           [ResourceType.CPU]: { value: 200 },
           [ResourceType.Memory]: { value: 256 },
-          [ResourceType.DatabaseCapacity]: { value: 1024 },
-          [ResourceType.StorageCapacity]: { value: 1024 },
           [ResourceType.NetworkTraffic]: { value: 0 },
           [ResourceType.DedicatedDatabaseCPU]: { value: 200 },
           [ResourceType.DedicatedDatabaseMemory]: { value: 256 },
@@ -293,8 +262,6 @@ export class InitializerService {
         spec: {
           [ResourceType.CPU]: { value: 500 },
           [ResourceType.Memory]: { value: 512 },
-          [ResourceType.DatabaseCapacity]: { value: 4096 },
-          [ResourceType.StorageCapacity]: { value: 4096 },
           [ResourceType.NetworkTraffic]: { value: 0 },
           [ResourceType.DedicatedDatabaseCPU]: { value: 500 },
           [ResourceType.DedicatedDatabaseMemory]: { value: 512 },
@@ -312,8 +279,6 @@ export class InitializerService {
         spec: {
           [ResourceType.CPU]: { value: 1000 },
           [ResourceType.Memory]: { value: 2048 },
-          [ResourceType.DatabaseCapacity]: { value: 16384 },
-          [ResourceType.StorageCapacity]: { value: 65536 },
           [ResourceType.NetworkTraffic]: { value: 0 },
           [ResourceType.DedicatedDatabaseCPU]: { value: 1000 },
           [ResourceType.DedicatedDatabaseMemory]: { value: 2048 },
@@ -331,8 +296,6 @@ export class InitializerService {
         spec: {
           [ResourceType.CPU]: { value: 2000 },
           [ResourceType.Memory]: { value: 4096 },
-          [ResourceType.DatabaseCapacity]: { value: 65536 },
-          [ResourceType.StorageCapacity]: { value: 262144 },
           [ResourceType.NetworkTraffic]: { value: 0 },
           [ResourceType.DedicatedDatabaseCPU]: { value: 2000 },
           [ResourceType.DedicatedDatabaseMemory]: { value: 4096 },

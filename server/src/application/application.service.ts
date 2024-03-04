@@ -438,8 +438,6 @@ export class ApplicationService {
       limitMemory: dto.memory,
       requestCPU,
       requestMemory,
-      databaseCapacity: dto.databaseCapacity || 0,
-      storageCapacity: dto.storageCapacity,
 
       limitCountOfCloudFunction,
       limitCountOfBucket,

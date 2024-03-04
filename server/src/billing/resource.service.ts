@@ -97,14 +97,10 @@ export class ResourceService {
 
     const cpu = bundle.spec.cpu.value
     const memory = bundle.spec.memory.value
-    const storage = bundle.spec.storageCapacity.value
-    const database = bundle.spec.databaseCapacity.value
 
     if (
       cpu === input.cpu &&
-      memory === input.memory &&
-      storage === input.storageCapacity &&
-      database === input.databaseCapacity
+      memory === input.memory 
     ) {
       return true
     }

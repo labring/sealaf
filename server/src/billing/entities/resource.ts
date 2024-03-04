@@ -4,8 +4,6 @@ import { ObjectId } from 'mongodb'
 export enum ResourceType {
   CPU = 'cpu',
   Memory = 'memory',
-  DatabaseCapacity = 'databaseCapacity',
-  StorageCapacity = 'storageCapacity',
   NetworkTraffic = 'networkTraffic',
   DedicatedDatabaseCPU = 'dedicatedDatabaseCPU',
   DedicatedDatabaseMemory = 'dedicatedDatabaseMemory',
@@ -51,12 +49,6 @@ export class ResourceBundleSpecMap {
   @ApiProperty({ type: ResourceSpec })
   [ResourceType.Memory]: ResourceSpec;
 
-  @ApiProperty({ type: ResourceSpec })
-  [ResourceType.DatabaseCapacity]: ResourceSpec;
-
-  @ApiProperty({ type: ResourceSpec })
-  [ResourceType.StorageCapacity]: ResourceSpec;
-
   @ApiPropertyOptional({ type: ResourceSpec })
   [ResourceType.NetworkTraffic]?: ResourceSpec;
 
@@ -90,8 +82,6 @@ export class ResourceBundle {
   spec: {
     [ResourceType.CPU]: ResourceSpec
     [ResourceType.Memory]: ResourceSpec
-    [ResourceType.DatabaseCapacity]: ResourceSpec
-    [ResourceType.StorageCapacity]: ResourceSpec
     [ResourceType.NetworkTraffic]?: ResourceSpec
     [ResourceType.DedicatedDatabaseCPU]: ResourceSpec
     [ResourceType.DedicatedDatabaseMemory]: ResourceSpec
