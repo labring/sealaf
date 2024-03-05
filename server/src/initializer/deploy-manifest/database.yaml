@@ -9,7 +9,6 @@ metadata:
     sealos-db-provider-cr: <%- name %>
   annotations: {}
   name: <%- name %>
-  namespace: laf-system
 spec:
   affinity:
     nodeLabels: {}
