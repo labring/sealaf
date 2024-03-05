@@ -28,7 +28,7 @@ export class DedicatedDatabaseService {
     private readonly cluster: ClusterService,
     private readonly regionService: RegionService,
     private readonly mongoService: MongoService,
-  ) {}
+  ) { }
 
   async create(appid: string, session?: ClientSession) {
     const db = SystemDatabase.db
@@ -92,7 +92,7 @@ export class DedicatedDatabaseService {
     return res
   }
 
-  async getDeployManifest(region: Region,user: User, appid: string) {
+  async getDeployManifest(region: Region, user: User, appid: string) {
     const api = this.cluster.makeObjectApi(user)
     const emptyManifest = this.makeDeployManifest(region, appid)
     const specs = loadAllYaml(emptyManifest)
@@ -101,6 +101,7 @@ export class DedicatedDatabaseService {
       'the deploy manifest of database should not be empty',
     )
     const spec = specs[0]
+    spec.metadata.namespace = user.namespace
 
     try {
       const manifest = await api.read(spec)

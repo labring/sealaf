@@ -4,18 +4,19 @@ import { CollectionController } from './collection/collection.controller'
 import { MongoService } from './mongo.service'
 import { ApplicationService } from 'src/application/application.service'
 import { BundleService } from 'src/application/bundle.service'
-import { SettingService } from 'src/setting/setting.service'
 import { DedicatedDatabaseService } from './dedicated-database/dedicated-database.service'
 import { DedicatedDatabaseTaskService } from './dedicated-database/dedicated-database-task.service'
 import { HttpModule } from '@nestjs/axios'
 import { ApplicationListener } from './listeners/application.listener'
 import { DedicatedDatabaseMonitorService } from './monitor/monitor.service'
 import { DedicatedDatabaseMonitorController } from './monitor/monitor.controller'
+import { DatabaseController } from './database.controller'
 
 @Module({
   imports: [HttpModule],
   controllers: [
     CollectionController,
+    DatabaseController,
     DedicatedDatabaseMonitorController,
   ],
   providers: [
@@ -34,4 +35,4 @@ import { DedicatedDatabaseMonitorController } from './monitor/monitor.controller
     DedicatedDatabaseService,
   ],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

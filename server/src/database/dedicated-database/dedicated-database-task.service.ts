@@ -21,7 +21,7 @@ export class DedicatedDatabaseTaskService {
     private readonly regionService: RegionService,
     private readonly clusterService: ClusterService,
     private readonly dbService: DedicatedDatabaseService,
-  ) {}
+  ) { }
 
   @Cron(CronExpression.EVERY_SECOND)
   async tick() {
@@ -95,7 +95,7 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    manifest = await this.dbService.getDeployManifest(region,user , appid)
+    manifest = await this.dbService.getDeployManifest(region, user, appid)
     const unavailable = manifest?.status?.phase !== 'Running'
     if (unavailable) {
       await this.relock(appid, waitingTime)
@@ -151,7 +151,7 @@ export class DedicatedDatabaseTaskService {
     const manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     if (manifest) {
-      await this.dbService.deleteDeployManifest(region,user, appid)
+      await this.dbService.deleteDeployManifest(region, user, appid)
       await this.relock(appid, waitingTime)
     }
 

@@ -16,7 +16,7 @@ export class ClusterService {
   async getUserByAppid(appid: string) {
     const db = SystemDatabase.db
     const app = await db.collection<Application>('Application').findOne({ appid })
-    if(!app) return null
+    if (!app) return null
     const user = await db.collection<User>('User').findOne({ _id: app.createdBy })
     return user
   }
@@ -193,10 +193,10 @@ export class ClusterService {
 
     let status
     try {
-      const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstorageusers", name)
+      const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstorageusers", name)
       status = (res.body as any)?.status
     } catch {
-      await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstorageusers", {
+      await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstorageusers", {
         apiVersion: "objectstorage.sealos.io/v1",
         kind: "ObjectStorageUser",
         metadata: {
@@ -206,20 +206,20 @@ export class ClusterService {
       })
 
       const watch = new k8s.Watch(this.loadKubeConfig(user))
-      const wait = (timeout: number) => new Promise((resolve,reject) => {
+      const wait = (timeout: number) => new Promise((resolve, reject) => {
         watch.watch(`/apis/objectstorage.sealos.io/v1/namespaces/${user.namespace}/objectstorageusers/${name}`, {}, (type, apiObj, watchObj) => {
-          if (type === 'MODIFIED') {
+          if (watchObj.status) {
             resolve(watchObj.status)
           }
-        }, (err) => reject(err)).then(req => {
+        }, (err) => err && reject(err)).then(req => {
           delay(() => {
             req.abort()
-            reject("timeout")
+            reject(`wait for storage user ${name} in ${user.namespace} ready timeout`)
           }, timeout)
         })
       })
 
-      status = await wait(5000)
+      status = await wait(30000)
     }
 
     assert(status, "storage conf cannot be empty")
@@ -234,10 +234,12 @@ export class ClusterService {
 
   async getStorageBucket(user: User, name: string) {
     const api = this.makeCustomObjectApi(user)
-    const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstoragebuckets", name)
+    const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstoragebuckets", name)
 
     const status = (res.body as any)?.status
-    assert(status, `bucket ${name} in ${user.namespace} is not ready`)
+    if (!status) {
+      return null
+    }
 
     return {
       name: status.name
@@ -246,7 +248,7 @@ export class ClusterService {
 
   async createStorageBucket(user: User, name: string, policy: "public" | "readonly" | "private") {
     const api = this.makeCustomObjectApi(user)
-    await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace,"objectstoragebuckets", {
+    await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstoragebuckets", {
       apiVersion: "objectstorage.sealos.io/v1",
       kind: "ObjectStorageBucket",
       metadata: {
@@ -259,20 +261,20 @@ export class ClusterService {
     })
 
     const watch = new k8s.Watch(this.loadKubeConfig(user))
-    const wait = (timeout: number) => new Promise((resolve,reject) => {
+    const wait = (timeout: number) => new Promise((resolve, reject) => {
       watch.watch(`/apis/objectstorage.sealos.io/v1/namespaces/${user.namespace}/objectstoragebuckets/${name}`, {}, (type, apiObj, watchObj) => {
-        if (type === 'MODIFIED') {
-            resolve(watchObj.status.name)
+        if (watchObj.status) {
+          resolve(watchObj.status.name)
         }
-      }, (err) => reject(err)).then(req => {
+      }, (err) => err && reject(err)).then(req => {
         delay(() => {
           req.abort()
-          reject("timeout")
+          reject(`wait for bucket ${name} in ${user.namespace} ready timeout`)
         }, timeout)
       })
     })
 
-    const bucketName = await wait(5000)
+    const bucketName = await wait(30000)
     return {
       name: bucketName as string
     }
@@ -280,7 +282,7 @@ export class ClusterService {
 
   async deleteStorageBucket(user: User, name: string) {
     const api = this.makeCustomObjectApi(user)
-    const res = await api.deleteClusterCustomObject("objectstorage.sealos.io", "v1", "objectstoragebuckets", name)
+    const res = await api.deleteNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstoragebuckets", name)
     return res.body
   }
 
