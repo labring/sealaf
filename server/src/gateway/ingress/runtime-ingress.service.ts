@@ -12,7 +12,7 @@ export class RuntimeGatewayService {
   constructor(
     private readonly clusterService: ClusterService,
     private readonly certificate: CertificateService,
-  ) {}
+  ) { }
 
   getIngressName(domain: RuntimeDomain) {
     return `sealaf-${domain.appid}`
@@ -38,14 +38,14 @@ export class RuntimeGatewayService {
     const namespace = user.namespace
 
     // use appid as ingress name of runtime directly
-    const name = `${appid}`
+    const name = this.getIngressName(runtimeDomain)
     const hosts = [runtimeDomain.domain]
     if (runtimeDomain.customDomain) {
       hosts.push(runtimeDomain.customDomain)
     }
 
     // build rules
-    const backend = { service: { name: `${appid}`, port: { number: 8000 } } }
+    const backend = { service: { name, port: { number: 8000 } } }
     const rules = hosts.map((host) => {
       return {
         host,
