@@ -45,7 +45,6 @@ export type TLSConf = {
 export type RegionGatewayConf = {
   driver: 'apisix' | 'nginx'
   runtimeDomain: string
-  websiteDomain: string
   port: number
   tls: TLSConf
 }

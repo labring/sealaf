@@ -61,7 +61,6 @@ export class InitializerService {
       gatewayConf: {
         driver: 'nginx',
         runtimeDomain: ServerConfig.DEFAULT_REGION_RUNTIME_DOMAIN,
-        websiteDomain: ServerConfig.DEFAULT_REGION_WEBSITE_DOMAIN,
         port: 80,
         tls: {
           enabled: ServerConfig.DEFAULT_REGION_TLS_ENABLED,

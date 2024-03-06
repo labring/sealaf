@@ -82,13 +82,6 @@ export class ServerConfig {
     return process.env.DEFAULT_REGION_RUNTIME_DOMAIN
   }
 
-  static get DEFAULT_REGION_WEBSITE_DOMAIN() {
-    if (!process.env.DEFAULT_REGION_WEBSITE_DOMAIN) {
-      throw new Error('DEFAULT_REGION_WEBSITE_DOMAIN is not defined')
-    }
-    return process.env.DEFAULT_REGION_WEBSITE_DOMAIN
-  }
-
   static get DEFAULT_REGION_TLS_ENABLED() {
     return process.env.DEFAULT_REGION_TLS_ENABLED === 'true'
   }
