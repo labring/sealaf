@@ -15,7 +15,7 @@ export class RuntimeGatewayService {
   ) {}
 
   getIngressName(domain: RuntimeDomain) {
-    return domain.appid
+    return `sealaf-${domain.appid}`
   }
 
   async getIngress(domain: RuntimeDomain) {
@@ -78,7 +78,7 @@ export class RuntimeGatewayService {
         namespace,
         labels: {
           [LABEL_KEY_APP_ID]: appid,
-          'laf.dev/ingress.type': 'runtime',
+          'sealaf.dev/ingress.type': 'runtime',
         },
         annotations: {
           // apisix ingress annotations

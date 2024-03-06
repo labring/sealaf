@@ -20,7 +20,7 @@ import { ApplicationBundle } from 'src/application/entities/application-bundle'
 import * as assert from 'assert'
 import { User } from 'src/user/entities/user'
 
-const getDedicatedDatabaseName = (appid: string) => appid
+const getDedicatedDatabaseName = (appid: string) => `sealaf-${appid}`
 
 @Injectable()
 export class DedicatedDatabaseService {

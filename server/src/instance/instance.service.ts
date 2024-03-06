@@ -23,7 +23,11 @@ export class InstanceService {
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
     private readonly applicationService: ApplicationService,
     private readonly cloudbin: CloudBinBucketService,
-  ) {}
+  ) { }
+  
+  getAppDeployName(appid: string) {
+    return `sealaf-${appid}`
+  }
 
   public async create(appid: string) {
     const app = await this.applicationService.findOneUnsafe(appid)
@@ -49,6 +53,7 @@ export class InstanceService {
     const app = await this.applicationService.findOneUnsafe(appid)
     const user = app.user
     const { deployment, service, hpa } = await this.get(appid)
+    const name = this.getAppDeployName(appid)
 
     const namespace = user.namespace
 
@@ -58,18 +63,17 @@ export class InstanceService {
 
     // ensure deployment deleted
     if (deployment) {
-      await appsV1Api.deleteNamespacedDeployment(appid, namespace)
+      await appsV1Api.deleteNamespacedDeployment(name, namespace)
     }
     // ensure service deleted
     if (service) {
-      const name = appid
       await coreV1Api.deleteNamespacedService(name, namespace)
     }
 
     if (hpa) {
       await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(
-        appid,
-        user.namespace
+        name,
+        namespace
       )
     }
 
@@ -105,7 +109,7 @@ export class InstanceService {
     )
     const appsV1Api = this.cluster.makeAppsV1Api(user)
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
-      app.appid,
+     this.getAppDeployName(appid),
       user.namespace,
       deployment,
     )
@@ -137,12 +141,13 @@ export class InstanceService {
   ) {
     const appid = app.appid
     const user = app.user
+    const name = this.getAppDeployName(appid)
 
     const namespace = user.namespace
 
     // create deployment
     const data = new V1Deployment()
-    data.metadata = { name: app.appid, labels }
+    data.metadata = { name, labels }
     data.spec = await this.makeDeploymentSpec(app, labels)
 
     const appsV1Api = this.cluster.makeAppsV1Api(user)
@@ -159,7 +164,7 @@ export class InstanceService {
   ) {
     const user = app.user
 
-    const serviceName = app.appid
+    const serviceName = this.getAppDeployName(app.appid)
     const coreV1Api = this.cluster.makeCoreV1Api(user)
     const spec = this.makeServiceSpec(labels)
     const res = await coreV1Api.createNamespacedService(user.namespace, {
@@ -173,10 +178,11 @@ export class InstanceService {
   private async getDeployment(app: ApplicationWithRelations) {
     const appid = app.appid
     const user = app.user
+    const name = this.getAppDeployName(appid)
 
     const appsV1Api = this.cluster.makeAppsV1Api(user)
     try {
-      const res = await appsV1Api.readNamespacedDeployment(appid, user.namespace)
+      const res = await appsV1Api.readNamespacedDeployment(name, user.namespace)
       return res.body
     } catch (error) {
       if (error?.response?.body?.reason === 'NotFound') return null
@@ -191,7 +197,7 @@ export class InstanceService {
 
     const coreV1Api = this.cluster.makeCoreV1Api(user)
     try {
-      const serviceName = appid
+      const serviceName = this.getAppDeployName(appid)
       const res = await coreV1Api.readNamespacedService(serviceName, user.namespace)
       return res.body
     } catch (error) {
@@ -439,7 +445,7 @@ export class InstanceService {
         kind: 'HorizontalPodAutoscaler',
         spec,
         metadata: {
-          name: app.appid,
+          name: this.getAppDeployName(app.appid),
           labels,
         },
       },
@@ -455,7 +461,7 @@ export class InstanceService {
     const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
 
     try {
-      const hpaName = appid
+      const hpaName = this.getAppDeployName(appid)
       const res = await hpaV2Api.readNamespacedHorizontalPodAutoscaler(
         hpaName,
         user.namespace,
@@ -507,7 +513,7 @@ export class InstanceService {
       scaleTargetRef: {
         apiVersion: 'apps/v1',
         kind: 'Deployment',
-        name: app.appid,
+        name: this.getAppDeployName(app.appid),
       },
       minReplicas,
       maxReplicas,
@@ -550,7 +556,7 @@ export class InstanceService {
     if (!app.bundle.autoscaling.enable) {
       if (!hpa) return
       await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(
-        app.appid,
+        this.getAppDeployName(appid),
         user.namespace,
       )
       this.logger.log(`delete k8s hpa ${app.appid}`)
@@ -558,7 +564,7 @@ export class InstanceService {
       if (hpa) {
         hpa.spec = this.makeHorizontalPodAutoscalerSpec(app)
         await hpaV2Api.replaceNamespacedHorizontalPodAutoscaler(
-          app.appid,
+          this.getAppDeployName(app.appid),
           user.namespace,
           hpa,
         )
@@ -574,8 +580,8 @@ export class InstanceService {
     const SEALOS = 'cloud.sealos.io/app-deploy-manager'
     const labels: Record<string, string> = {
       [LABEL_KEY_APP_ID]: appid,
-      [SEALOS]: appid,
-      app: appid,
+      [SEALOS]: this.getAppDeployName(appid),
+      app: this.getAppDeployName(appid),
     }
 
     return labels

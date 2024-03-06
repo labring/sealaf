@@ -36,7 +36,7 @@ export class CronJobService {
       metadata: {
         name,
         labels: {
-          appid,
+          app: `sealaf-${appid}`,
           id: trigger._id.toString(),
         },
       },

@@ -71,10 +71,6 @@ export class ServerConfig {
     }
   }
 
-  static get SITE_NAME() {
-    return process.env.SITE_NAME || 'laf'
-  }
-
   static get API_SERVER_URL() {
     return process.env.API_SERVER_URL || 'http://localhost:3000'
   }
@@ -111,7 +107,7 @@ export class ServerConfig {
   }
 }
 
-export const LABEL_KEY_APP_ID = 'laf.dev/appid'
+export const LABEL_KEY_APP_ID = 'sealaf.dev/appid'
 
 // Runtime constants
 export const HTTP_METHODS = ['HEAD', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH']

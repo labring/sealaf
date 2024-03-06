@@ -85,6 +85,7 @@ export class ClusterService {
     const deleted: k8s.KubernetesObject[] = []
 
     for (const spec of validSpecs) {
+      spec.metadata.namespace = user.namespace
       try {
         // try to get the resource, if it does not exist an error will be thrown and we will end up in the catch
         // block.

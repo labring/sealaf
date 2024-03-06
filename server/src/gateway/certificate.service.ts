@@ -12,7 +12,7 @@ export class CertificateService {
   constructor(private readonly clusterService: ClusterService) {}
 
   getRuntimeCertificateName(domain: RuntimeDomain) {
-    return `${domain.appid}-runtime-custom-domain`
+    return `sealaf-${domain.appid}-runtime-custom-domain`
   }
 
   // Read a certificate for app custom domain using cert-manager.io CRD
@@ -30,7 +30,7 @@ export class CertificateService {
       name,
       runtimeDomain.customDomain,
       {
-        'laf.dev/runtime-domain': runtimeDomain.customDomain,
+        'sealaf.dev/runtime-domain': runtimeDomain.customDomain,
         [LABEL_KEY_APP_ID]: runtimeDomain.appid,
       },
     )
