@@ -1,0 +1,21 @@
+apiVersion: app.sealos.io/v1
+kind: App
+metadata:
+  name: sealaf
+  namespace: app-system
+spec:
+  data:
+    desc: Serverless function
+    url: "https://sealaf.{{ .cloudDomain }}{{ if .cloudPort }}:{{ .cloudPort }}{{ end }}"
+  icon: "https://sealaf.{{ .cloudDomain }}{{ if .cloudPort }}:{{ .cloudPort }}{{ end }}/logo.svg"
+  i18n:
+    zh:
+      name: 函数计算
+    zh-Hans:
+      name: 函数计算
+  menuData:
+    helpDropDown: false
+    nameColor: text-black
+  name: Serverless function
+  type: iframe
+  displayType: normal

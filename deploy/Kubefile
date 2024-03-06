@@ -1,0 +1,17 @@
+FROM scratch
+
+USER 65532:65532
+
+COPY etc etc
+COPY scripts scripts
+COPY manifests manifests
+
+ENV cloudDomain="127.0.0.1.nip.io"
+ENV cloudPort=""
+
+ENV certSecretName="wildcard-cert"
+
+ENV mongodbUri=""
+ENV monitorUrl="http://database-monitor.sealos.svc.cluster.local:9090"
+
+CMD ["bash scripts/init.sh"]

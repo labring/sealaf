@@ -1,0 +1,36 @@
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: Cluster
+metadata:
+  finalizers:
+    - cluster.kubeblocks.io/finalizer
+  generation: 1
+  labels:
+    clusterdefinition.kubeblocks.io/name: mongodb
+    clusterversion.kubeblocks.io/name: mongodb-5.0
+  name: sealaf-mongodb
+  namespace: sealaf-system
+spec:
+  clusterDefinitionRef: mongodb
+  clusterVersionRef: mongodb-5.0
+  componentSpecs:
+    - componentDefRef: mongodb
+      monitor: true
+      name: mongodb
+      replicas: 1
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: "0.5"
+          memory: 1Gi
+      serviceAccountName: sealaf-mongodb
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+  terminationPolicy: Delete
