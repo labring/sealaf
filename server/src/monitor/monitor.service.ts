@@ -10,26 +10,9 @@ const requestConfig = {
   rateAccuracy: '1m',
 }
 
-export const getQuery =
-  ({ rateAccuracy }: { rateAccuracy: string }) =>
-    (opts: Record<string, unknown>, metric: MonitorMetric) => {
-      switch (metric) {
-        case MonitorMetric.cpuUsage:
-          return {
-            instant: false,
-            query: `sum(rate(container_cpu_usage_seconds_total{image!="",container="${opts.appid}",pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
-          }
-        case MonitorMetric.memoryUsage:
-          return {
-            instant: false,
-            query: `sum(container_memory_working_set_bytes{image!="",container="${opts.appid}",pod=~"${opts.pods}",namespace="${opts.namespace}"}) by (${opts.selector})`,
-          }
-      }
-    }
-
 export enum MonitorMetric {
-  cpuUsage = 'cpuUsage',
-  memoryUsage = 'memoryUsage',
+  cpu = 'cpu',
+  memory = 'memory',
 }
 
 @Injectable()
@@ -43,7 +26,6 @@ export class MonitorService {
   async getData(
     appid: string,
     metrics: MonitorMetric[],
-    queryParams: Record<string, number | string>,
     isRange: boolean,
   ) {
     const endpoint = ServerConfig.APP_MONITOR_URL
@@ -52,38 +34,31 @@ export class MonitorService {
       return {}
     }
     const user = await this.clusterService.getUserByAppid(appid)
-    const namespace = user.namespace
 
-    const opts = {
-      appid,
-      selector: 'pod',
-      namespace: namespace,
-      pods: 'sealaf-' + appid + '.+',
-    }
     const data = {}
     const res = metrics.map(async (metric) => {
-      const { query, instant } = getQuery({
-        rateAccuracy: requestConfig.rateAccuracy,
-      })(opts, metric)
-
       data[metric] =
-        instant || !isRange
-          ? await this.query(endpoint, query, user)
-          : await this.queryRange(endpoint, query, queryParams, user)
+        !isRange
+          ? await this.query(endpoint, appid, metric, user)
+          : await this.queryRange(endpoint, appid, metric, user)
     })
 
     await Promise.all(res)
     return data
   }
 
-  private async query(endpoint: string, query: string, user: User) {
-    return await this.queryInternal(endpoint, { query }, user)
+  private async query(endpoint: string, appid: string, type: string, user: User) {
+    const query = {
+      type,
+      launchPadName: `sealaf-${appid}`,
+    }
+    return await this.queryInternal(endpoint, query, user)
   }
 
   private async queryRange(
     endpoint: string,
-    query: string,
-    queryParams: Record<string, number | string>,
+    appid: string,
+    type: string,
     user: User
   ) {
     const range = 3600 // 1 hour
@@ -91,16 +66,15 @@ export class MonitorService {
     const start = now - range
     const end = now
 
-    queryParams = {
-      range,
-      step: 60,
+    const queryParams = {
+      step: '1m',
       start,
       end,
-      ...queryParams,
     }
 
     return await this.queryInternal(endpoint, {
-      query,
+      type,
+      launchPadName: `sealaf-${appid}`,
       ...queryParams,
     }, user)
   }
@@ -113,10 +87,11 @@ export class MonitorService {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
         const res = await this.httpService
-          .post(endpoint, {
-            ...query,
-            namespace: user.namespace
-          }, {
+          .get(endpoint, {
+            params: {
+              ...query,
+              namespace: user.namespace
+            },
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': encodeURIComponent(user.kubeconfig)

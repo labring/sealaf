@@ -22,15 +22,12 @@ export class MonitorController {
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get(':appid/metrics')
   async getData(@Param('appid') appid: string, @Query() dto: QueryMetricsDto) {
-    const { q: metrics, step, type } = dto
+    const { q: metrics, type } = dto
     const isRange = type === 'range'
 
     const res = await this.monitorService.getData(
       appid,
       metrics,
-      {
-        step,
-      },
       isRange,
     )
 
