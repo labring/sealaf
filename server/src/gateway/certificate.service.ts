@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { LABEL_KEY_APP_ID } from 'src/constants'
 import { ClusterService } from 'src/region/cluster/cluster.service'
-import { Region } from 'src/region/entities/region'
 import { RuntimeDomain } from './entities/runtime-domain'
 import { User } from 'src/user/entities/user'
 
@@ -22,14 +21,14 @@ export class CertificateService {
   }
 
   // Create a certificate for app custom domain using cert-manager.io CRD
-  async createRuntimeCertificate(region: Region, user: User, runtimeDomain: RuntimeDomain) {
+  async createRuntimeCertificate(user: User, runtimeDomain: RuntimeDomain) {
     const name = this.getRuntimeCertificateName(runtimeDomain)
     return await this.create(
-      region,
       user,
       name,
       runtimeDomain.customDomain,
       {
+        'cloud.sealos.io/app-deploy-manager': `sealaf-${runtimeDomain.appid}`,
         'sealaf.dev/runtime-domain': runtimeDomain.customDomain,
         [LABEL_KEY_APP_ID]: runtimeDomain.appid,
       },
@@ -63,13 +62,42 @@ export class CertificateService {
   }
 
   private async create(
-    region: Region,
     user: User,
     name: string,
     domain: string,
     labels: Record<string, string>,
   ) {
     const api = this.clusterService.makeObjectApi(user)
+    await api.create({
+      apiVersion: 'cert-manager.io/v1',
+      kind: 'Issuer',
+      // Set the metadata for the Certificate resource
+      metadata: {
+        name,
+        namespace: user.namespace,
+        labels,
+      },
+      // Define the specification for the Certificate resource
+      spec: {
+        acme: {
+          server: 'https://acme-v02.api.letsencrypt.org/directory',
+            email: 'admin@sealos.io',
+            privateKeySecretRef: {
+              name: 'letsencrypt-prod'
+            },
+            solvers: [
+              {
+                http01: {
+                  ingress: {
+                    class: 'nginx',
+                    serviceType: 'ClusterIP'
+                  }
+                }
+              }
+            ]
+        }
+      },
+    })
     const res = await api.create({
       apiVersion: 'cert-manager.io/v1',
       kind: 'Certificate',
@@ -83,7 +111,10 @@ export class CertificateService {
       spec: {
         secretName: name,
         dnsNames: [domain],
-        issuerRef: region.gatewayConf.tls.issuerRef,
+        issuerRef: {
+          name,
+          kind: "Issuer"
+        }
       },
     })
     return res.body

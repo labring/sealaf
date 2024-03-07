@@ -64,7 +64,6 @@ export class InitializerService {
         port: 80,
         tls: {
           enabled: ServerConfig.DEFAULT_REGION_TLS_ENABLED,
-          issuerRef: { name: 'laf-issuer', kind: 'Issuer' },
           wildcardCertificateSecretName:
             ServerConfig.DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME,
         },

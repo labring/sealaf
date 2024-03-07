@@ -102,7 +102,7 @@ export class RuntimeDomainTaskService {
       // create custom domain certificate
       let cert = await this.certService.getRuntimeCertificate(user, doc)
       if (!cert) {
-        cert = await this.certService.createRuntimeCertificate(region, user, doc)
+        cert = await this.certService.createRuntimeCertificate(user, doc)
         this.logger.log(`create runtime domain certificate: ${doc.appid}`)
         // return to wait for cert to be ready
         return await this.relock(doc.appid, waitingTime)

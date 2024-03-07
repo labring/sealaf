@@ -35,10 +35,6 @@ export type RegionDatabaseConf = {
 
 export type TLSConf = {
   enabled: boolean
-  issuerRef: {
-    name: string
-    kind: 'ClusterIssuer' | 'Issuer'
-  }
   wildcardCertificateSecretName?: string
 }
 
