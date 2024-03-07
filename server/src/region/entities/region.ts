@@ -86,7 +86,6 @@ export class Region {
   clusterConf: RegionClusterConf
   bundleConf: RegionResourceBundleConf
   gatewayConf: RegionGatewayConf
-  prometheusConf: PrometheusConf
 
   deployManifest: DeployManifest
 

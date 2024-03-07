@@ -69,9 +69,6 @@ export class InitializerService {
             ServerConfig.DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME,
         },
       },
-      prometheusConf: {
-        apiUrl: ServerConfig.DEFAULT_REGION_PROMETHEUS_URL,
-      },
       deployManifest: manifest,
       updatedAt: new Date(),
       createdAt: new Date(),

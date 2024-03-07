@@ -2,7 +2,6 @@ import { Controller, Get, UseGuards } from '@nestjs/common'
 import { DedicatedDatabaseMonitorService } from './monitor.service'
 import { InjectApplication, InjectUser } from 'src/utils/decorator'
 import { ApplicationWithRelations } from 'src/application/entities/application'
-import { RegionService } from 'src/region/region.service'
 import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
 import { ApplicationAuthGuard } from 'src/authentication/application.auth.guard'
 import {
@@ -19,9 +18,8 @@ import { User } from 'src/user/entities/user'
 @Controller('apps/:appid/dedicated-database/monitor')
 export class DedicatedDatabaseMonitorController {
   constructor(
-    private readonly region: RegionService,
     private readonly monitor: DedicatedDatabaseMonitorService,
-  ) {}
+  ) { }
 
   @ApiOperation({
     summary: 'Get dedicated database resources metrics data',
@@ -30,8 +28,7 @@ export class DedicatedDatabaseMonitorController {
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('resource')
   async getResource(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
-    const region = await this.region.findOne(app.regionId)
-    const res = await this.monitor.getResource(app.appid, region, user)
+    const res = await this.monitor.getResource(app.appid, user)
     return ResponseUtil.ok(res)
   }
 
@@ -40,8 +37,7 @@ export class DedicatedDatabaseMonitorController {
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('connection')
   async getConnection(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
-    const region = await this.region.findOne(app.regionId)
-    const res = await this.monitor.getConnection(app.appid, region, user)
+    const res = await this.monitor.getConnection(app.appid, user)
     return ResponseUtil.ok(res)
   }
 
@@ -50,8 +46,7 @@ export class DedicatedDatabaseMonitorController {
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('performance')
   async getPerformance(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
-    const region = await this.region.findOne(app.regionId)
-    const res = await this.monitor.getPerformance(app.appid, region, user)
+    const res = await this.monitor.getPerformance(app.appid, user)
     return ResponseUtil.ok(res)
   }
 }

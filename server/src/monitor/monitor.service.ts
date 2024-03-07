@@ -1,8 +1,7 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
+import { ServerConfig } from 'src/constants'
 import { ClusterService } from 'src/region/cluster/cluster.service'
-import { PrometheusConf } from 'src/region/entities/region'
-import { RegionService } from 'src/region/region.service'
 import { User } from 'src/user/entities/user'
 
 const requestConfig = {
@@ -13,20 +12,20 @@ const requestConfig = {
 
 export const getQuery =
   ({ rateAccuracy }: { rateAccuracy: string }) =>
-  (opts: Record<string, unknown>, metric: MonitorMetric) => {
-    switch (metric) {
-      case MonitorMetric.cpuUsage:
-        return {
-          instant: false,
-          query: `sum(rate(container_cpu_usage_seconds_total{image!="",container!="",pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
-        }
-      case MonitorMetric.memoryUsage:
-        return {
-          instant: false,
-          query: `sum(container_memory_working_set_bytes{image!="",container!="",pod=~"${opts.pods}",namespace="${opts.namespace}"}) by (${opts.selector})`,
-        }
+    (opts: Record<string, unknown>, metric: MonitorMetric) => {
+      switch (metric) {
+        case MonitorMetric.cpuUsage:
+          return {
+            instant: false,
+            query: `sum(rate(container_cpu_usage_seconds_total{image!="",container="${opts.appid}",pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
+          }
+        case MonitorMetric.memoryUsage:
+          return {
+            instant: false,
+            query: `sum(container_memory_working_set_bytes{image!="",container="${opts.appid}",pod=~"${opts.pods}",namespace="${opts.namespace}"}) by (${opts.selector})`,
+          }
+      }
     }
-  }
 
 export enum MonitorMetric {
   cpuUsage = 'cpuUsage',
@@ -37,9 +36,8 @@ export enum MonitorMetric {
 export class MonitorService {
   constructor(
     private readonly httpService: HttpService,
-    private readonly regionService: RegionService,
     private readonly clusterService: ClusterService
-  ) {}
+  ) { }
   private readonly logger = new Logger(MonitorService.name)
 
   async getData(
@@ -48,9 +46,8 @@ export class MonitorService {
     queryParams: Record<string, number | string>,
     isRange: boolean,
   ) {
-    const region = await this.regionService.findByAppId(appid)
-    const conf = region?.prometheusConf
-    if (!conf?.apiUrl) {
+    const endpoint = ServerConfig.APP_MONITOR_URL
+    if (!endpoint) {
       this.logger.warn('Metrics not available for no endpoint')
       return {}
     }
@@ -71,22 +68,20 @@ export class MonitorService {
 
       data[metric] =
         instant || !isRange
-          ? await this.query(conf, query, user)
-          : await this.queryRange(conf, query, queryParams, user)
+          ? await this.query(endpoint, query, user)
+          : await this.queryRange(endpoint, query, queryParams, user)
     })
 
     await Promise.all(res)
     return data
   }
 
-  private async query(conf: PrometheusConf, query: string,user: User) {
-    const endpoint = `${conf.apiUrl}/api/v1/query`
-
+  private async query(endpoint: string, query: string, user: User) {
     return await this.queryInternal(endpoint, { query }, user)
   }
 
   private async queryRange(
-    conf: PrometheusConf,
+    endpoint: string,
     query: string,
     queryParams: Record<string, number | string>,
     user: User
@@ -104,12 +99,10 @@ export class MonitorService {
       ...queryParams,
     }
 
-    const endpoint = `${conf.apiUrl}/api/v1/query_range`
-
     return await this.queryInternal(endpoint, {
       query,
       ...queryParams,
-    },user)
+    }, user)
   }
 
   private async queryInternal(
@@ -120,7 +113,10 @@ export class MonitorService {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
         const res = await this.httpService
-          .post(endpoint, query, {
+          .post(endpoint, {
+            ...query,
+            namespace: user.namespace
+          }, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': encodeURIComponent(user.kubeconfig)

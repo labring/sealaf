@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
-import { Region } from 'src/region/entities/region'
+import { ServerConfig } from 'src/constants'
 import { User } from 'src/user/entities/user'
 
 const requestConfig = {
@@ -13,13 +13,12 @@ const requestConfig = {
 export class DedicatedDatabaseMonitorService {
   private readonly logger = new Logger(DedicatedDatabaseMonitorService.name)
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly httpService: HttpService) { }
 
-  async getResource(appid: string, region: Region, user: User) {
+  async getResource(appid: string, user: User) {
     const dbName = this.getDBName(appid)
 
     const cpu = await this.queryRange(
-      region,
       `sum(rate(container_cpu_usage_seconds_total{image!="",container!="",pod=~"${dbName}-mongo.+",namespace="${user.namespace}"}[1m])) by (pod)`,
       {
         labels: ['pod'],
@@ -27,7 +26,6 @@ export class DedicatedDatabaseMonitorService {
       user
     )
     const memory = await this.queryRange(
-      region,
       `sum(container_memory_working_set_bytes{image!="",container!="",pod=~"${dbName}-mongo.+",namespace="${user.namespace}"}) by (pod)`,
       {
         labels: ['pod'],
@@ -35,7 +33,6 @@ export class DedicatedDatabaseMonitorService {
       user
     )
     const dataSize = await this.query(
-      region,
       `sum(mongodb_dbstats_dataSize{pod=~"${dbName}-mongo.+"}) by (database)`,
       {
         labels: ['database'],
@@ -50,17 +47,17 @@ export class DedicatedDatabaseMonitorService {
     }
   }
 
-  async getConnection(appid: string, region: Region, user: User) {
+  async getConnection(appid: string, user: User) {
     const dbName = this.getDBName(appid)
     const query = `mongodb_connections{pod=~"${dbName}-mongo.+",state="current"}`
-    const connections = await this.queryRange(region, query, {
+    const connections = await this.queryRange(query, {
       labels: ['pod'],
-    },  user)
+    }, user)
     return {
       connections,
     }
   }
-  async getPerformance(appid: string, region: Region, user: User) {
+  async getPerformance(appid: string, user: User) {
     const dbName = this.getDBName(appid)
     const queries = {
       documentOperations: `rate(mongodb_mongod_metrics_document_total{pod=~"${dbName}-mongo.+"}[1m])`,
@@ -71,7 +68,7 @@ export class DedicatedDatabaseMonitorService {
     const res = await Promise.all(
       Object.keys(queries).map(async (key) => {
         const query = queries[key]
-        const data = await this.queryRange(region, query, {
+        const data = await this.queryRange(query, {
           labels: ['pod', 'type', 'state'],
         }, user)
         return data
@@ -90,26 +87,23 @@ export class DedicatedDatabaseMonitorService {
   }
 
   private async query(
-    region: Region,
     query: string,
     queryParams: Record<string, number | string | string[]>,
     user: User
   ) {
-    const host = region.prometheusConf?.apiUrl
-    if (!host) return []
-    const endpoint = `${host}/api/v1/query`
+    const endpoint = ServerConfig.DATABASE_MONITOR_URL
+    if (!endpoint) return []
 
     return await this.queryInternal(endpoint, { query, ...queryParams }, user)
   }
 
   private async queryRange(
-    region: Region,
     query: string,
     queryParams: Record<string, number | string | string[]>,
     user: User
   ) {
-    const host = region.prometheusConf?.apiUrl
-    if (!host) return []
+    const endpoint = ServerConfig.DATABASE_MONITOR_URL
+    if (!endpoint) return []
 
     const range = 3600 // 1 hour
     const now = Math.floor(Date.now() / 1000)
@@ -123,8 +117,6 @@ export class DedicatedDatabaseMonitorService {
       end,
       ...queryParams,
     }
-
-    const endpoint = `${host}/api/v1/query_range`
 
     return await this.queryInternal(endpoint, {
       query,
@@ -142,7 +134,10 @@ export class DedicatedDatabaseMonitorService {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
         const res = await this.httpService
-          .post(endpoint, query, {
+          .post(endpoint, {
+            ...query,
+            namespace: user.namespace
+          }, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
               'Authorization': encodeURIComponent(user.kubeconfig)

@@ -90,13 +90,17 @@ export class ServerConfig {
     return process.env.DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME
   }
 
-  static get DEFAULT_REGION_PROMETHEUS_URL() {
-    return process.env.DEFAULT_REGION_PROMETHEUS_URL
-  }
-
   // HTTP interceptor
   static get HTTP_INTERCEPTOR_URL() {
     return process.env.HTTP_INTERCEPTOR_URL
+  }
+
+  static get APP_MONITOR_URL() {
+    return process.env.APP_MONITOR_URL
+  }
+
+  static get DATABASE_MONITOR_URL() {
+    return process.env.DATABASE_MONITOR_URL
   }
 }
 
