@@ -1,27 +1,10 @@
 #!/bin/bash
 set -e
 
-mongodbUri=""
-
 source etc/sealaf/.env
 
 NAMESPACE=sealaf-system
 kubectl create ns $NAMESPACE || true
-
-echo "waiting for $certSecretName generated"
-kubectl wait --for=condition=exists --timeout=120s secret/$certSecretName -n $NAMESPACE
-
-gen_mongodbUri
-
-MONGO_URI=$mongodb_uri
-SERVER_JWT_SECRET=$(tr -cd 'a-z0-9' </dev/urandom | head -c32)
-kubectl create secret generic sealaf-config \
-  --from-literal=MONGO_URI=${MONGO_URI} \
-  --from-literal=SERVER_JWT_SECRET=${SERVER_JWT_SECRET} || true
-
-kubectl apply -f manifests/deploy.yaml \
-  -f manifests/ingress.yaml \
-  -f manifests/appcr.yaml
 
 function gen_mongodbUri() {
   # if mongodbUri is empty then create mongodb and gen mongodb uri
@@ -46,3 +29,32 @@ function gen_mongodbUri() {
     mongodbUri=$(scripts/gen-mongodb-uri.sh)
   fi
 }
+
+function wait_for_cert_secret() {
+  message="waiting for $certSecretName generated"
+  while [ -z "$(kubectl get secret -n $NAMESPACE $certSecretName 2>/dev/null)" ]; do
+    echo -ne "\r$message   \e[K"
+    sleep 0.5
+    echo -ne "\r$message .  \e[K"
+    sleep 0.5
+    echo -ne "\r$message .. \e[K"
+    sleep 0.5
+    echo -ne "\r$message ...\e[K"
+    sleep 0.5
+  done
+  echo "$certSecretName has been generated successfully."
+}
+
+wait_for_cert_secret
+gen_mongodbUri
+
+SERVER_JWT_SECRET=$(tr -cd 'a-z0-9' </dev/urandom | head -c32)
+kubectl create secret generic sealaf-config -n $NAMESPACE \
+  --from-literal=DATABASE_URL=${mongodbUri} \
+  --from-literal=SERVER_JWT_SECRET=${SERVER_JWT_SECRET} \
+  --from-literal=APP_MONITOR_URL=${appMonitorUrl} \
+  --from-literal=DATABASE_MONITOR_URL=${databaseMonitorUrl} || true
+
+kubectl apply -f manifests/deploy.yaml \
+  -f manifests/ingress.yaml \
+  -f manifests/appcr.yaml

@@ -36,7 +36,7 @@ spec:
             requests:
               cpu: 20m
               memory: 25Mi
-          image: docker.io/zacharywin/sealaf-web:latest
+          image: docker.io/zacharywin/sealaf-web:{{ .webVersion }}
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
@@ -95,7 +95,7 @@ spec:
             requests:
               cpu: 100m
               memory: 204Mi
-          image: docker.io/zacharywin/sealaf-server:latest
+          image: docker.io/zacharywin/sealaf-server:{{ .serverVersion }}
           imagePullPolicy: Always
           env:
             - name: DATABASE_URL
@@ -108,16 +108,24 @@ spec:
                 secretKeyRef:
                   name: sealaf-config
                   key: SERVER_JWT_SECRET
+            - name: APP_MONITOR_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sealaf-config
+                  key: APP_MONITOR_URL
+            - name: DATABASE_MONITOR_URL
+              valueFrom:
+                secretKeyRef:
+                  name: sealaf-config
+                  key: DATABASE_MONITOR_URL
             - name: API_SERVER_URL
               value: "https://sealaf-api.{{ .cloudDomain }}{{ if .cloudPort }}:{{ .cloudPort }}{{ end }}"
             - name: JWT_EXPIRES_IN
               value: 7d
             - name: DEFAULT_REGION_RUNTIME_DOMAIN
               value: "{{ .cloudDomain }}"
-            - name: DEFAULT_REGION_TLS
+            - name: DEFAULT_REGION_TLS_ENABLED
               value: "true"
-            - name: DEFAULT_REGION_PROMETHEUS_URL
-              value: {{.monitorUrl}}
           livenessProbe:
             httpGet:
               path: /v1/regions

@@ -12,6 +12,10 @@ ENV cloudPort=""
 ENV certSecretName="wildcard-cert"
 
 ENV mongodbUri=""
-ENV monitorUrl="http://database-monitor.sealos.svc.cluster.local:9090"
+ENV appMonitorUrl="http://launchpad-monitor.sealos.svc.cluster.local:8428/query"
+ENV databaseMonitorUrl="http://database-monitor.sealos.svc.cluster.local:9090/query"
+
+ENV webVersion="latest"
+ENV serverVersion="latest"
 
 CMD ["bash scripts/init.sh"]
