@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { PrometheusConf } from 'src/region/entities/region'
 import { RegionService } from 'src/region/region.service'
+import { User } from 'src/user/entities/user'
 
 const requestConfig = {
   retryAttempts: 5,
@@ -17,32 +18,12 @@ export const getQuery =
       case MonitorMetric.cpuUsage:
         return {
           instant: false,
-          query: `sum(laf_runtime_cpu{container!="",appid="${opts.appid}"}) by (${opts.selector})`,
+          query: `sum(rate(container_cpu_usage_seconds_total{image!="",container!="",pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
         }
       case MonitorMetric.memoryUsage:
         return {
           instant: false,
-          query: `sum(laf_runtime_memory{container!="",appid="${opts.appid}"}) by (${opts.selector})`,
-        }
-      case MonitorMetric.networkReceive:
-        return {
-          instant: false,
-          query: `sum(rate(container_network_receive_bytes_total{pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
-        }
-      case MonitorMetric.networkTransmit:
-        return {
-          instant: false,
-          query: `sum(rate(container_network_transmit_bytes_total{pod=~"${opts.pods}",namespace="${opts.namespace}"}[${rateAccuracy}])) by (${opts.selector})`,
-        }
-      case MonitorMetric.databaseUsage:
-        return {
-          instant: true,
-          query: `sum(mongodb_dbstats_dataSize{database="${opts.appid}"})`,
-        }
-      case MonitorMetric.storageUsage:
-        return {
-          instant: true,
-          query: `sum(minio_bucket_usage_total_bytes{bucket=~"${opts.appid}.+"})`,
+          query: `sum(container_memory_working_set_bytes{image!="",container!="",pod=~"${opts.pods}",namespace="${opts.namespace}"}) by (${opts.selector})`,
         }
     }
   }
@@ -50,10 +31,6 @@ export const getQuery =
 export enum MonitorMetric {
   cpuUsage = 'cpuUsage',
   memoryUsage = 'memoryUsage',
-  networkReceive = 'networkReceive',
-  networkTransmit = 'networkTransmit',
-  databaseUsage = 'databaseUsage',
-  storageUsage = 'storageUsage',
 }
 
 @Injectable()
@@ -84,7 +61,7 @@ export class MonitorService {
       appid,
       selector: 'pod',
       namespace: namespace,
-      pods: appid + '.+',
+      pods: 'sealaf-' + appid + '.+',
     }
     const data = {}
     const res = metrics.map(async (metric) => {
@@ -94,24 +71,25 @@ export class MonitorService {
 
       data[metric] =
         instant || !isRange
-          ? await this.query(conf, query)
-          : await this.queryRange(conf, query, queryParams)
+          ? await this.query(conf, query, user)
+          : await this.queryRange(conf, query, queryParams, user)
     })
 
     await Promise.all(res)
     return data
   }
 
-  private async query(conf: PrometheusConf, query: string) {
+  private async query(conf: PrometheusConf, query: string,user: User) {
     const endpoint = `${conf.apiUrl}/api/v1/query`
 
-    return await this.queryInternal(endpoint, { query })
+    return await this.queryInternal(endpoint, { query }, user)
   }
 
   private async queryRange(
     conf: PrometheusConf,
     query: string,
     queryParams: Record<string, number | string>,
+    user: User
   ) {
     const range = 3600 // 1 hour
     const now = Math.floor(Date.now() / 1000)
@@ -131,12 +109,13 @@ export class MonitorService {
     return await this.queryInternal(endpoint, {
       query,
       ...queryParams,
-    })
+    },user)
   }
 
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number>,
+    user: User
   ) {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
@@ -144,6 +123,7 @@ export class MonitorService {
           .post(endpoint, query, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': encodeURIComponent(user.kubeconfig)
             },
           })
           .toPromise()

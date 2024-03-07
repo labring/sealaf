@@ -212,7 +212,6 @@ export class InstanceService {
       type: 'ClusterIP',
       ports: [
         { port: 8000, targetPort: 8000, protocol: 'TCP', name: 'http' },
-        { port: 9000, targetPort: 9000, protocol: 'TCP', name: 'storage' },
       ],
     }
     return spec
@@ -316,7 +315,6 @@ export class InstanceService {
               env,
               ports: [
                 { containerPort: 8000, name: 'http' },
-                { containerPort: 9000, name: 'storage' },
               ],
               resources: {
                 limits: {

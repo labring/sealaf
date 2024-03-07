@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { Region } from 'src/region/entities/region'
+import { User } from 'src/user/entities/user'
 
 const requestConfig = {
   retryAttempts: 5,
@@ -14,22 +15,24 @@ export class DedicatedDatabaseMonitorService {
 
   constructor(private readonly httpService: HttpService) {}
 
-  async getResource(appid: string, region: Region) {
+  async getResource(appid: string, region: Region, user: User) {
     const dbName = this.getDBName(appid)
 
     const cpu = await this.queryRange(
       region,
-      `laf_mongo_cpu{appid="${appid}"}`,
+      `sum(rate(container_cpu_usage_seconds_total{image!="",container!="",pod=~"${dbName}-mongo.+",namespace="${user.namespace}"}[1m])) by (pod)`,
       {
         labels: ['pod'],
       },
+      user
     )
     const memory = await this.queryRange(
       region,
-      `laf_mongo_memory{appid="${appid}"}`,
+      `sum(container_memory_working_set_bytes{image!="",container!="",pod=~"${dbName}-mongo.+",namespace="${user.namespace}"}) by (pod)`,
       {
         labels: ['pod'],
       },
+      user
     )
     const dataSize = await this.query(
       region,
@@ -37,6 +40,7 @@ export class DedicatedDatabaseMonitorService {
       {
         labels: ['database'],
       },
+      user
     )
 
     return {
@@ -46,17 +50,17 @@ export class DedicatedDatabaseMonitorService {
     }
   }
 
-  async getConnection(appid: string, region: Region) {
+  async getConnection(appid: string, region: Region, user: User) {
     const dbName = this.getDBName(appid)
     const query = `mongodb_connections{pod=~"${dbName}-mongo.+",state="current"}`
     const connections = await this.queryRange(region, query, {
       labels: ['pod'],
-    })
+    },  user)
     return {
       connections,
     }
   }
-  async getPerformance(appid: string, region: Region) {
+  async getPerformance(appid: string, region: Region, user: User) {
     const dbName = this.getDBName(appid)
     const queries = {
       documentOperations: `rate(mongodb_mongod_metrics_document_total{pod=~"${dbName}-mongo.+"}[1m])`,
@@ -69,7 +73,7 @@ export class DedicatedDatabaseMonitorService {
         const query = queries[key]
         const data = await this.queryRange(region, query, {
           labels: ['pod', 'type', 'state'],
-        })
+        }, user)
         return data
       }),
     )
@@ -82,25 +86,27 @@ export class DedicatedDatabaseMonitorService {
   }
 
   getDBName(appid: string) {
-    return `${appid}`
+    return `sealaf-${appid}`
   }
 
   private async query(
     region: Region,
     query: string,
-    queryParams?: Record<string, number | string | string[]>,
+    queryParams: Record<string, number | string | string[]>,
+    user: User
   ) {
     const host = region.prometheusConf?.apiUrl
     if (!host) return []
     const endpoint = `${host}/api/v1/query`
 
-    return await this.queryInternal(endpoint, { query, ...queryParams })
+    return await this.queryInternal(endpoint, { query, ...queryParams }, user)
   }
 
   private async queryRange(
     region: Region,
     query: string,
-    queryParams?: Record<string, number | string | string[]>,
+    queryParams: Record<string, number | string | string[]>,
+    user: User
   ) {
     const host = region.prometheusConf?.apiUrl
     if (!host) return []
@@ -123,12 +129,13 @@ export class DedicatedDatabaseMonitorService {
     return await this.queryInternal(endpoint, {
       query,
       ...queryParams,
-    })
+    }, user)
   }
 
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number | string[]>,
+    user: User
   ) {
     const labels = query.labels
     delete query['labels']
@@ -138,6 +145,7 @@ export class DedicatedDatabaseMonitorService {
           .post(endpoint, query, {
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': encodeURIComponent(user.kubeconfig)
             },
           })
           .toPromise()

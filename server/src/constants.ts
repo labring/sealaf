@@ -44,7 +44,7 @@ export class ServerConfig {
   }
 
   static get APPID_LENGTH(): number {
-    return parseInt(process.env.APPID_LENGTH || '6')
+    return parseInt(process.env.APPID_LENGTH || '10')
   }
 
   static get RUNTIME_CUSTOM_DEPENDENCY_BASE_PATH() {
