@@ -36,7 +36,7 @@ spec:
             requests:
               cpu: 20m
               memory: 25Mi
-          image: docker.io/zacharywin/sealaf-web:{{ .webVersion }}
+          image: docker.io/zacharywin/sealaf-web:0.0.6
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
@@ -95,7 +95,7 @@ spec:
             requests:
               cpu: 100m
               memory: 204Mi
-          image: docker.io/zacharywin/sealaf-server:{{ .serverVersion }}
+          image: docker.io/zacharywin/sealaf-server:0.0.10
           imagePullPolicy: Always
           env:
             - name: DATABASE_URL
