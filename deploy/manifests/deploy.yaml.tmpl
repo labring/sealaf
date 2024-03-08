@@ -126,6 +126,8 @@ spec:
               value: "{{ .cloudDomain }}"
             - name: DEFAULT_REGION_TLS_ENABLED
               value: "true"
+            - name: DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME
+              value: "{{ .certSecretName }}"
           livenessProbe:
             httpGet:
               path: /v1/regions
