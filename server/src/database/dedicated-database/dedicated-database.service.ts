@@ -6,7 +6,6 @@ import {
   DedicatedDatabaseSpec,
   DedicatedDatabaseState,
 } from '../entities/dedicated-database'
-import { RegionService } from 'src/region/region.service'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import * as _ from 'lodash'
 import { SystemDatabase } from 'src/system-database'
@@ -35,7 +34,7 @@ export class DedicatedDatabaseService {
     await db.collection<DedicatedDatabase>('DedicatedDatabase').insertOne(
       {
         appid,
-        name: `sealaf-${appid}`,
+        name: getDedicatedDatabaseName(appid),
         createdAt: new Date(),
         updatedAt: new Date(),
         lockedAt: TASK_LOCK_INIT_TIME,
@@ -169,7 +168,10 @@ export class DedicatedDatabaseService {
 
     const username = Buffer.from(srv.body.data.username, 'base64').toString()
     const password = Buffer.from(srv.body.data.password, 'base64').toString()
-    const host = Buffer.from(srv.body.data.headlessHost, 'base64').toString()
+    let host = Buffer.from(srv.body.data.headlessHost, 'base64').toString()
+    if (host && !host.includes(user.namespace)) {
+      host += `.${user.namespace}`
+    }
     const port = Number(
       Buffer.from(srv.body.data.headlessPort, 'base64').toString(),
     )
