@@ -30,22 +30,6 @@ function gen_mongodbUri() {
   fi
 }
 
-function wait_for_cert_secret() {
-  message="waiting for $certSecretName generated"
-  while [ -z "$(kubectl get secret -n $NAMESPACE $certSecretName 2>/dev/null)" ]; do
-    echo -ne "\r$message   \e[K"
-    sleep 0.5
-    echo -ne "\r$message .  \e[K"
-    sleep 0.5
-    echo -ne "\r$message .. \e[K"
-    sleep 0.5
-    echo -ne "\r$message ...\e[K"
-    sleep 0.5
-  done
-  echo "$certSecretName has been generated successfully."
-}
-
-wait_for_cert_secret
 gen_mongodbUri
 
 SERVER_JWT_SECRET=$(tr -cd 'a-z0-9' </dev/urandom | head -c32)
