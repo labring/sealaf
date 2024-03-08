@@ -188,6 +188,20 @@ export class ClusterService {
     return res.body
   }
 
+  async createStorageUser(user: User) {
+    const api = this.makeCustomObjectApi(user)
+    const name = user.namespace.replace("ns-", "")
+    const res = await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstorageusers", {
+      apiVersion: "objectstorage.sealos.io/v1",
+      kind: "ObjectStorageUser",
+      metadata: {
+        name,
+        namespace: user.namespace
+      },
+    })
+    return res
+  }
+
   async getStorageConf(user: User) {
     const api = this.makeCustomObjectApi(user)
     const name = user.namespace.replace("ns-", "")
@@ -197,15 +211,7 @@ export class ClusterService {
       const res = await api.getNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstorageusers", name)
       status = (res.body as any)?.status
     } catch {
-      await api.createNamespacedCustomObject("objectstorage.sealos.io", "v1", user.namespace, "objectstorageusers", {
-        apiVersion: "objectstorage.sealos.io/v1",
-        kind: "ObjectStorageUser",
-        metadata: {
-          name,
-          namespace: user.namespace
-        },
-      })
-
+      await this.createStorageUser(user)
       const watch = new k8s.Watch(this.loadKubeConfig(user))
       const wait = (timeout: number) => new Promise((resolve, reject) => {
         watch.watch(`/apis/objectstorage.sealos.io/v1/namespaces/${user.namespace}/objectstorageusers/${name}`, {}, (type, apiObj, watchObj) => {

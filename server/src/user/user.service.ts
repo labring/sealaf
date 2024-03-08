@@ -27,10 +27,6 @@ export class UserService {
       })
   }
 
-  async findOneByUsername(username: string) {
-    return this.db.collection<User>('User').findOne({ username })
-  }
-
   async findOneByNamespace(namespace: string) {
     return this.db.collection<User>('User').findOne({ namespace })
   }

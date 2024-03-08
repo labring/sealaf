@@ -36,6 +36,7 @@ export class AuthenticationController {
     let _user = await this.userService.findOneByNamespace(user.namespace)
     if (!_user) {
       _user = await this.userService.create(user)
+      await this.clusterService.createStorageUser(user).catch(() => {})
     }
     const token = this.authService.getAccessTokenByUser(_user)
     return ResponseUtil.ok({token, user})
