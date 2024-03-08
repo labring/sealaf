@@ -45,9 +45,6 @@ export default function CollectionListPanel() {
   return (
     <Panel
       className="min-w-[200px] flex-grow overflow-hidden"
-      onClick={() => {
-        store.setCurrentShow("DB");
-      }}
     >
       <Panel.Header
         title={
@@ -111,12 +108,11 @@ export default function CollectionListPanel() {
               .map((db: any) => {
                 return (
                   <SectionList.Item
-                    isActive={store.currentShow === "DB" && db.name === store.currentDB?.name}
+                    isActive={db.name === store.currentDB?.name}
                     key={db.name}
                     className={clsx(
                       "group h-7 hover:!text-primary-700",
                       darkMode ? "text-grayIron-200" : "text-grayIron-700",
-                      store.currentShow !== "Policy" &&
                         db?.name === store.currentDB?.name &&
                         "!text-primary-700",
                     )}
@@ -128,7 +124,7 @@ export default function CollectionListPanel() {
                       <div className="flex items-center overflow-hidden text-ellipsis whitespace-nowrap font-medium">
                         <DatabaseIcon
                           className={
-                            store.currentShow !== "Policy" && db?.name === store.currentDB?.name
+                            db?.name === store.currentDB?.name
                               ? ""
                               : "!text-grayModern-400 group-hover:!text-primary-700"
                           }
@@ -137,7 +133,7 @@ export default function CollectionListPanel() {
                       </div>
                       <MoreButton
                         label={t("Operation")}
-                        isHidden={db.name !== store.currentDB?.name || store.currentShow !== "DB"}
+                        isHidden={db.name !== store.currentDB?.name}
                       >
                         <>
                           <CopyText

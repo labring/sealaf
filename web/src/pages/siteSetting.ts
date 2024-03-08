@@ -7,17 +7,14 @@ import { SettingControllerGetSettings } from "@/apis/v1/settings";
 
 type SITE_KEY =
   | "site_footer"
-  | "id_verify"
   | "site_url"
   | "ai_pilot_url"
   | "laf_forum_url"
   | "laf_business_url"
   | "laf_discord_url"
   | "laf_wechat_url"
-  | "laf_status_url"
   | "laf_doc_url"
   | "laf_about_us_url"
-  | "enable_web_promo_page";
 
 type State = {
   siteSettings: {

@@ -1,48 +1,36 @@
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
+import type { SessionV1 } from '@zjy365/sealos-desktop-sdk';
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import * as yaml from 'js-yaml';
 
-import { PROVIDER_NAME } from "@/constants";
-
-import { AuthenticationControllerGetProviders } from "@/apis/v1/auth";
-
-type State = {
-  initProviders: () => void;
-  githubProvider: any;
-  phoneProvider: any;
-  passwordProvider: any;
-  emailProvider: any;
-  defaultProvider: any;
+type SessionState = {
+  session: SessionV1;
+  locale: string;
+  setSession: (ss: SessionV1) => void;
+  getKubeconfig: () => string;
+  getNamespace: () => string;
 };
 
-const useAuthStore = create<State>()(
+const useSessionStore = create<SessionState>()(
   devtools(
     immer((set, get) => ({
-      initProviders: async () => {
-        const res = await AuthenticationControllerGetProviders({});
-        set((state) => {
-          state.githubProvider = res.data.find(
-            (provider: any) => provider.name === PROVIDER_NAME.GITHUB,
-          );
-          state.phoneProvider = res.data.find(
-            (provider: any) => provider.name === PROVIDER_NAME.PHONE,
-          );
-          state.passwordProvider = res.data.find(
-            (provider: any) => provider.name === PROVIDER_NAME.PASSWORD,
-          );
-          state.emailProvider = res.data.find(
-            (provider: any) => provider.name === PROVIDER_NAME.EMAIL,
-          );
-          state.defaultProvider = res.data.find((provider: any) => provider.default);
-        });
+      session: {} as SessionV1,
+      locale: 'zh',
+      setSession: (ss: SessionV1) => set({ session: ss }),
+      getKubeconfig: () => {
+        return get().session?.kubeconfig || ""
       },
-      githubProvider: {},
-      phoneProvider: {},
-      passwordProvider: {},
-      emailProvider: {},
-      defaultProvider: {},
+      getNamespace: () => {
+        if (get().session?.kubeconfig === '') {
+          return '';
+        }
+        const doc = yaml.load(get().session.kubeconfig);
+        // @ts-ignore
+        return doc?.contexts[0]?.context?.namespace;
+      }
     })),
-  ),
+  )
 );
 
-export default useAuthStore;
+export default useSessionStore;

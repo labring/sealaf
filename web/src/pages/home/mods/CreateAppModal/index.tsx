@@ -18,15 +18,12 @@ import {
 } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { t } from "i18next";
-import { debounce } from "lodash";
 import _ from "lodash";
 
-import ChargeButton from "@/components/ChargeButton";
 import { APP_STATUS } from "@/constants/index";
-import { formatOriginalPrice, formatPrice } from "@/utils/format";
 
 import { APP_LIST_QUERY_KEY } from "../..";
-import { queryKeys, useAccountQuery } from "../../service";
+import { queryKeys } from "../../service";
 
 import AutoscalingControl, { TypeAutoscaling } from "./AutoscalingControl";
 import BundleControl from "./BundleControl";
@@ -39,7 +36,6 @@ import {
   ApplicationControllerUpdateName,
 } from "@/apis/v1/applications";
 import {
-  ResourceControllerCalculatePrice,
   ResourceControllerGetResourceOptions,
 } from "@/apis/v1/resources";
 import useGlobalStore from "@/pages/globalStore";
@@ -55,8 +51,6 @@ type FormData = {
 export type TypeBundle = {
   cpu: number;
   memory: number;
-  databaseCapacity?: number;
-  storageCapacity: number;
   dedicatedDatabase?: {
     cpu: number;
     memory: number;
@@ -82,7 +76,6 @@ const CreateAppModal = (props: {
     setCurrentApp,
     updateCurrentApp,
   } = useGlobalStore();
-  const { data: accountRes } = useAccountQuery();
 
   const title = useMemo(
     () => (type === "edit" ? t("Edit") : type === "change" ? t("Change") : t("CreateApp")),
@@ -125,26 +118,20 @@ const CreateAppModal = (props: {
   const defaultBundle: TypeBundle = {
     cpu: application?.bundle.resource.limitCPU || sortedBundles[0].spec.cpu.value,
     memory: application?.bundle.resource.limitMemory || sortedBundles[0].spec.memory.value,
-    databaseCapacity:
-      application?.bundle.resource.databaseCapacity || sortedBundles[0].spec.databaseCapacity.value,
-    storageCapacity:
-      application?.bundle.resource.storageCapacity || sortedBundles[0].spec.storageCapacity.value,
-    dedicatedDatabase: !application?.bundle.resource.databaseCapacity
-      ? {
-          cpu:
-            application?.bundle.resource.dedicatedDatabase?.limitCPU ||
-            sortedBundles[0].spec.dedicatedDatabaseCPU.value,
-          memory:
-            application?.bundle.resource.dedicatedDatabase?.limitMemory ||
-            sortedBundles[0].spec.dedicatedDatabaseMemory.value,
-          capacity:
-            application?.bundle.resource.dedicatedDatabase?.capacity ||
-            sortedBundles[0].spec.dedicatedDatabaseCapacity.value,
-          replicas:
-            application?.bundle.resource.dedicatedDatabase?.replicas ||
-            sortedBundles[0].spec.dedicatedDatabaseReplicas.value,
-        }
-      : undefined,
+    dedicatedDatabase: {
+      cpu:
+        application?.bundle.resource.dedicatedDatabase?.limitCPU ||
+        sortedBundles[0].spec.dedicatedDatabaseCPU.value,
+      memory:
+        application?.bundle.resource.dedicatedDatabase?.limitMemory ||
+        sortedBundles[0].spec.dedicatedDatabaseMemory.value,
+      capacity:
+        application?.bundle.resource.dedicatedDatabase?.capacity ||
+        sortedBundles[0].spec.dedicatedDatabaseCapacity.value,
+      replicas:
+        application?.bundle.resource.dedicatedDatabase?.replicas ||
+        sortedBundles[0].spec.dedicatedDatabaseReplicas.value,
+    }
   };
 
   const defaultAutoscaling: TypeAutoscaling = {
@@ -159,26 +146,6 @@ const CreateAppModal = (props: {
 
   const [bundle, setBundle] = useState(defaultBundle);
   const [autoscaling, setAutoscaling] = useState(defaultAutoscaling);
-  const [totalPrice, setTotalPrice] = useState(0);
-  const [calculating, setCalculating] = useState(false);
-
-  const billingQuery = useQuery(
-    [queryKeys.useBillingPriceQuery],
-    async () => {
-      return ResourceControllerCalculatePrice({
-        ...getValues(),
-        ...bundle,
-      });
-    },
-    {
-      enabled: false,
-      staleTime: 1000,
-      onSuccess(res) {
-        setTotalPrice(res?.data?.total || 0);
-        setCalculating(false);
-      },
-    },
-  );
 
   const { data: billingResourceOptionsRes, isLoading } = useQuery(
     queryKeys.useBillingResourceOptionsQuery,
@@ -189,20 +156,6 @@ const CreateAppModal = (props: {
       enabled: isOpen,
     },
   );
-
-  useEffect(() => {
-    const debouncedBillingQuery = debounce(() => {
-      billingQuery.refetch();
-    }, 500);
-
-    if (isOpen) {
-      debouncedBillingQuery();
-    }
-
-    return () => {
-      debouncedBillingQuery.cancel();
-    };
-  }, [isOpen, bundle, autoscaling]);
 
   const updateAppMutation = useMutation((params: any) => ApplicationControllerUpdateName(params));
   const createAppMutation = useMutation((params: any) => ApplicationControllerCreate(params));
@@ -233,8 +186,6 @@ const CreateAppModal = (props: {
             ...currentApp.bundle.resource,
             limitCPU: bundle.cpu,
             limitMemory: bundle.memory,
-            databaseCapacity: bundle.databaseCapacity,
-            storageCapacity: bundle.storageCapacity,
             dedicatedDatabase: {
               limitCPU: bundle.dedicatedDatabase?.cpu || 0,
               limitMemory: bundle.dedicatedDatabase?.memory || 0,
@@ -345,7 +296,6 @@ const CreateAppModal = (props: {
                           const v1 = _.cloneDeep(_.set(prev, k, v));
                           return v1;
                         });
-                        setCalculating(true);
                       }}
                       resourceOptions={billingResourceOptionsRes?.data}
                     />
@@ -357,10 +307,8 @@ const CreateAppModal = (props: {
                           const v1 = _.cloneDeep(_.set(prev, k, v));
                           return v1;
                         });
-                        setCalculating(true);
                       }}
                       type={type}
-                      defaultDatabaseCapacity={defaultBundle.databaseCapacity}
                       defaultDedicatedDatabaseBundle={defaultBundle.dedicatedDatabase}
                       resourceOptions={billingResourceOptionsRes?.data}
                     ></DatabaseBundleControl>
@@ -370,47 +318,14 @@ const CreateAppModal = (props: {
               </VStack>
             </ModalBody>
             <ModalFooter h={20}>
-              <HStack spacing={0} w="full" justify="space-between" px="8">
-                <HStack>
-                  <span className="mr-2 flex text-center text-lg font-semibold text-grayModern-600">
-                    <p>{t("Balance") + ":"}</p>
-                    <p className="ml-1">{formatPrice(accountRes?.data?.balance)}</p>
-                  </span>
-                  <ChargeButton>
-                    <p className="!mr-2 cursor-pointer text-lg font-semibold text-blue-600">
-                      {t("ChargeNow")}
-                    </p>
-                  </ChargeButton>
-                </HStack>
-                <HStack>
-                  {type !== "edit" && (
-                    <div className="!mx-2 flex items-center">
-                      {!calculating ? (
-                        <span>
-                          <span className="w-36 text-center text-xl font-semibold text-error-500">
-                            {`${formatOriginalPrice(totalPrice, 6)} / ${t("Hour")}`}
-                          </span>
-                          <span className="mx-1 text-[13px] font-medium text-grayModern-600">
-                            {`( ${formatOriginalPrice(totalPrice * 24 * 30)} / ${t("Month")} )`}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="mr-2 flex w-36 justify-center">
-                          <Spinner className="!h-4 !w-4" />
-                        </span>
-                      )}
-                    </div>
-                  )}
+              <HStack spacing={0} w="full" justify="flex-end" px="8">
                   {type !== "edit" && (
                     <Button
                       isLoading={createAppMutation.isLoading}
                       type="submit"
                       onClick={handleSubmit(onSubmit)}
-                      isDisabled={totalPrice > accountRes?.data?.balance!}
                     >
-                      {totalPrice > accountRes?.data?.balance!
-                        ? t("balance is insufficient")
-                        : type === "change"
+                      {type === "change"
                         ? t("Confirm")
                         : t("CreateNow")}
                     </Button>
@@ -425,7 +340,6 @@ const CreateAppModal = (props: {
                     </Button>
                   )}
                 </HStack>
-              </HStack>
             </ModalFooter>
           </ModalContent>
         </Modal>

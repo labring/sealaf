@@ -18,7 +18,6 @@ import FunctionDetailPopOver from "./FunctionDetailPopOver";
 import "./index.css";
 
 import useFunctionCache from "@/hooks/useFunctionCache";
-import CollaborateButton from "@/pages/app/collaboration/CollaborateButton";
 import DeployButton from "@/pages/app/functions/mods/DeployButton";
 import SysSetting from "@/pages/app/setting/SysSetting";
 import useGlobalStore from "@/pages/globalStore";
@@ -151,7 +150,6 @@ function HeadPanel() {
         )}
         spacing={3}
       >
-        <CollaborateButton />
         {!!currentFunction._id && (
           <>
             <DeployButton />

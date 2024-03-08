@@ -18,7 +18,7 @@ const { toast } = createStandaloneToast();
 type CloseFunc = () => void;
 
 type State = {
-  userInfo: Definitions.UserWithProfile | undefined;
+  userInfo: Definitions.User | undefined;
   loading: boolean;
   runtimes?: TRuntime[];
   regions?: TRegion[];

@@ -5,7 +5,6 @@ import useGlobalStore from "../globalStore";
 import SideBar from "./mods/SideBar";
 import DatabasePage from "./database";
 import FunctionPage from "./functions";
-import StoragePage from "./storages";
 
 function AppDetail() {
   const { visitedViews, currentPageId } = useGlobalStore();
@@ -21,10 +20,6 @@ function AppDetail() {
           {
             pageId: Pages.database,
             component: DatabasePage,
-          },
-          {
-            pageId: Pages.storage,
-            component: StoragePage,
           },
         ].map((item) =>
           visitedViews.includes(item.pageId) ? (

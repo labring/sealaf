@@ -49,13 +49,17 @@ export type TBundle = {
 };
 
 export type TInstantMonitorData = {
-  cpuUsage: TDatabaseUsage;
-  memoryUsage: TDatabaseUsage;
-  databaseUsage: TDatabaseUsage;
-  storageUsage: TDatabaseUsage;
+  cpu: TCpuUsageData;
+  memory: TMemoryUsageData;
+  database: TDatabaseUsage;
 };
 
 export type TCpuUsageData = {
+  metric: { pod: string };
+  values: Array<[number, string]>;
+}[];
+
+export type TMemoryUsageData = {
   metric: { pod: string };
   values: Array<[number, string]>;
 }[];
@@ -68,8 +72,6 @@ export type TDatabaseUsage = {
 export type TSpec = {
   cpu: Cpu;
   memory: Memory;
-  databaseCapacity: DatabaseCapacity;
-  storageCapacity: StorageCapacity;
   networkTraffic: NetworkTraffic;
   dedicatedDatabaseCPU: Cpu;
   dedicatedDatabaseMemory: Memory;
@@ -104,8 +106,6 @@ export type Replicas = {
 export type TResource = {
   limitCPU: number;
   limitMemory: number;
-  databaseCapacity: number;
-  storageCapacity: number;
   networkTrafficOutbound: number;
   limitCountOfCloudFunction: number;
   limitCountOfBucket: number;
@@ -380,8 +380,6 @@ export type TApplicationItem = {
     resource: {
       limitCPU: number;
       limitMemory: number;
-      databaseCapacity: number;
-      storageCapacity: number;
       limitCountOfCloudFunction: number;
       limitCountOfBucket: number;
       limitCountOfDatabasePolicy: number;

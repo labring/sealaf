@@ -5,7 +5,7 @@ import { useQueries } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { MonitorIcon } from "@/components/CommonIcon";
-import { uniformCapacity, uniformCPU, uniformMemory, uniformStorage } from "@/utils/format";
+import { uniformCapacity, uniformCPU, uniformMemory } from "@/utils/format";
 
 import { TInstantMonitorData } from "@/apis/typing";
 import { DedicatedDatabaseMonitorControllerGetResource } from "@/apis/v1/apps";
@@ -13,15 +13,13 @@ import { MonitorControllerGetData } from "@/apis/v1/monitor";
 import SysSetting from "@/pages/app/setting/SysSetting";
 import useGlobalStore from "@/pages/globalStore";
 
-export const MonitorDataType = ["cpuUsage", "memoryUsage", "databaseUsage", "storageUsage"];
+export const MonitorDataType = ["cpu", "memory"];
 
 export default function MonitorBar() {
   const { currentApp } = useGlobalStore();
   const { t } = useTranslation();
-  const { limitCPU, limitMemory, storageCapacity, dedicatedDatabase } = currentApp.bundle.resource;
-  const dedicatedDatabaseLimitCPU = dedicatedDatabase?.limitCPU;
-  let { databaseCapacity } = currentApp.bundle.resource;
-  databaseCapacity = dedicatedDatabaseLimitCPU ? dedicatedDatabase.capacity : databaseCapacity;
+  const { limitCPU, limitMemory, dedicatedDatabase } = currentApp.bundle.resource;
+  let databaseCapacity = dedicatedDatabase.capacity;
 
   const [resources, setResources] = useState<any>([]);
   const [instantData, setInstantData] = useState<TInstantMonitorData>();
@@ -53,28 +51,16 @@ export default function MonitorBar() {
   const resourceData = results[1].data?.data;
   useEffect(() => {
     if (allDataLoaded) {
-      const { cpuUsage, memoryUsage, storageUsage } = instantMonitorData || {};
-      if (resourceData && "cpu" in resourceData) {
-        const databaseUsage = resourceData.dataSize.find(
-          (item: any) => item.metric.database === appid,
-        );
-        const data = {
-          cpuUsage,
-          memoryUsage,
-          databaseUsage: databaseUsage ? [databaseUsage] : [],
-          storageUsage,
-        };
-        setInstantData(data);
-      } else {
-        const databaseUsage = instantMonitorData?.databaseUsage;
-        const data = {
-          cpuUsage,
-          memoryUsage,
-          databaseUsage,
-          storageUsage,
-        };
-        setInstantData(data);
-      }
+      const { cpu, memory } = instantMonitorData || {};
+      const databaseUsage = resourceData.dataSize.find(
+        (item: any) => item.metric.database === appid,
+      );
+      const data = {
+        cpu,
+        memory,
+        database: databaseUsage ? [databaseUsage] : [],
+      };
+      setInstantData(data);
     }
   }, [appid, instantMonitorData, resourceData, allDataLoaded]);
 
@@ -92,23 +78,18 @@ export default function MonitorBar() {
     setResources([
       {
         label: `CPU`,
-        percent: (uniformCPU(getAverage(instantData.cpuUsage)) / limitCPU) * 100,
+        percent: (uniformCPU(getAverage(instantData.cpu)) / limitCPU) * 100,
         color: "#47C8BF",
       },
       {
         label: t("Spec.RAM"),
-        percent: (uniformMemory(getAverage(instantData.memoryUsage)) / limitMemory) * 100,
+        percent: (uniformMemory(getAverage(instantData.memory)) / limitMemory) * 100,
         color: "#8172D8",
       },
       {
         label: t("Spec.Database"),
-        percent: (uniformCapacity(getAverage(instantData.databaseUsage)) / databaseCapacity) * 100,
+        percent: (uniformCapacity(getAverage(instantData.database)) / databaseCapacity) * 100,
         color: "#ED598E",
-      },
-      {
-        label: t("Spec.Storage"),
-        percent: (uniformStorage(getAverage(instantData.storageUsage)) / storageCapacity) * 100,
-        color: "#36ADEF",
       },
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps

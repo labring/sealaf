@@ -35,14 +35,8 @@ export type TTabMatch = {
 }[];
 
 export const TabKeys = {
-  CostOverview: "cost-overview",
-  CardRedemption: "card-redemption",
-  BillingDetails: "billing-details",
-  RechargeHistory: "recharge-history",
-  PricingStandards: "pricing-standards",
   UserInfo: "user-info",
   PAT: "pat",
-  UserInvite: "user-invite",
 };
 
 const SettingModal = (props: {

@@ -11,142 +11,22 @@ import request from '@/utils/request';
 import useGlobalStore from "@/pages/globalStore";
 
 /**
-* Signup by user-password
+* Signin by kubeconfig
 */
-export async function UserPasswordControllerSignup(
-  params: Definitions.PasswdSignupDto,
+export async function AuthenticationControllerSignin(
+  params: Definitions.SigninDto,
 ): Promise<{
     error: string;
-    data: Paths.UserPasswordControllerSignup.Responses
+    data: Paths.AuthenticationControllerSignin.Responses
 }> {
-  // /v1/auth/passwd/signup
+  // /v1/auth/signin
   let _params: { [key: string]: any } = {
     appid: useGlobalStore.getState().currentApp?.appid || '',
     ...params,
   };
-  return request(`/v1/auth/passwd/signup`, {
+  return request(`/v1/auth/signin`, {
     method: 'POST',
     data : params,
-  });
-}
-
-/**
-* Signin by user-password
-*/
-export async function UserPasswordControllerSignin(
-  params: Definitions.PasswdSigninDto,
-): Promise<{
-    error: string;
-    data: Paths.UserPasswordControllerSignin.Responses
-}> {
-  // /v1/auth/passwd/signin
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/passwd/signin`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Reset password
-*/
-export async function UserPasswordControllerReset(
-  params: Definitions.PasswdResetDto,
-): Promise<{
-    error: string;
-    data: Paths.UserPasswordControllerReset.Responses
-}> {
-  // /v1/auth/passwd/reset
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/passwd/reset`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Check if user-password is set
-*/
-export async function UserPasswordControllerCheck(
-  params: Definitions.PasswdCheckDto,
-): Promise<{
-    error: string;
-    data: Paths.UserPasswordControllerCheck.Responses
-}> {
-  // /v1/auth/passwd/check
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/passwd/check`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Send phone verify code
-*/
-export async function PhoneControllerSendCode(
-  params: Definitions.SendPhoneCodeDto,
-): Promise<{
-    error: string;
-    data: Paths.PhoneControllerSendCode.Responses
-}> {
-  // /v1/auth/phone/sms/code
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/phone/sms/code`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Signin by phone and verify code
-*/
-export async function PhoneControllerSignin(
-  params: Definitions.PhoneSigninDto,
-): Promise<{
-    error: string;
-    data: Paths.PhoneControllerSignin.Responses
-}> {
-  // /v1/auth/phone/signin
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/phone/signin`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Auth providers
-*/
-export async function AuthenticationControllerGetProviders(
-  params: Paths.AuthenticationControllerGetProviders.BodyParameters,
-): Promise<{
-    error: string;
-    data: Paths.AuthenticationControllerGetProviders.Responses
-}> {
-  // /v1/auth/providers
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/providers`, {
-    method: 'GET',
-    params : params,
   });
 }
 
@@ -165,126 +45,6 @@ export async function AuthenticationControllerPat2token(
     ...params,
   };
   return request(`/v1/auth/pat2token`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Send email verify code
-*/
-export async function EmailControllerSendCode(
-  params: Definitions.SendEmailCodeDto,
-): Promise<{
-    error: string;
-    data: Paths.EmailControllerSendCode.Responses
-}> {
-  // /v1/auth/email/code
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/email/code`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Signin by email and verify code
-*/
-export async function EmailControllerSignin(
-  params: Definitions.EmailSigninDto,
-): Promise<{
-    error: string;
-    data: Paths.EmailControllerSignin.Responses
-}> {
-  // /v1/auth/email/signin
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/email/signin`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Redirect to the login page of github
-*/
-export async function GithubAuthControllerJumpLogin(
-  params: Paths.GithubAuthControllerJumpLogin.BodyParameters,
-): Promise<{
-    error: string;
-    data: Paths.GithubAuthControllerJumpLogin.Responses
-}> {
-  // /v1/auth/github/jump_login
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/github/jump_login`, {
-    method: 'GET',
-    params : params,
-  });
-}
-
-/**
-* Signin by github
-*/
-export async function GithubAuthControllerSignin(
-  params: Definitions.GithubSigninDto,
-): Promise<{
-    error: string;
-    data: Paths.GithubAuthControllerSignin.Responses
-}> {
-  // /v1/auth/github/signin
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/github/signin`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Bind github
-*/
-export async function GithubAuthControllerBind(
-  params: Definitions.GithubBind,
-): Promise<{
-    error: string;
-    data: Definitions.UserWithProfile
-}> {
-  // /v1/auth/github/bind
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/github/bind`, {
-    method: 'POST',
-    data : params,
-  });
-}
-
-/**
-* Unbind github
-*/
-export async function GithubAuthControllerUnbind(
-  params: Paths.GithubAuthControllerUnbind.BodyParameters,
-): Promise<{
-    error: string;
-    data: Definitions.UserWithProfile
-}> {
-  // /v1/auth/github/unbind
-  let _params: { [key: string]: any } = {
-    appid: useGlobalStore.getState().currentApp?.appid || '',
-    ...params,
-  };
-  return request(`/v1/auth/github/unbind`, {
     method: 'POST',
     data : params,
   });

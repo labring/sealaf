@@ -143,18 +143,6 @@ const AppEnvList = () => {
                   formatSize(currentApp?.bundle?.resource.limitMemory * 1024 * 1024, 0),
                 ),
               },
-              {
-                key: t("Spec.Database"),
-                value: String(
-                  formatSize(currentApp?.bundle?.resource.databaseCapacity * 1024 * 1024, 0),
-                ),
-              },
-              {
-                key: t("Spec.Storage"),
-                value: String(
-                  formatSize(currentApp?.bundle?.resource.storageCapacity * 1024 * 1024, 0),
-                ),
-              },
             ]}
             className={darkMode ? "w-60" : "w-60 bg-[#F8FAFB]"}
           />

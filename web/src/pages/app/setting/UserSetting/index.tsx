@@ -25,7 +25,6 @@ import {
 
 import useTabMatch from "./useTabMatch";
 
-import UserBalance from "@/layouts/Header/UserBalance";
 import SettingModal, { TabKeys } from "@/pages/app/setting";
 import useSiteSettingStore from "@/pages/siteSetting";
 
@@ -56,24 +55,7 @@ export default function UserSetting(props: { name: string; avatar?: string; widt
         boxShadow={"0px 10px 18px 0px rgba(187, 196, 206, 0.25)"}
       >
         <PopoverBody className="cursor-auto">
-          <div
-            className={clsx(
-              "flex w-full justify-end pb-3 pr-4 pt-2 text-lg",
-              darkMode ? "text-white" : "text-grayModern-600",
-            )}
-          >
-            <span
-              className="flex cursor-pointer items-center font-medium hover:text-error-500"
-              onClick={() => {
-                localStorage.removeItem("token");
-                window.location.href = "/login";
-              }}
-            >
-              <ExitIcon boxSize={5} className="mr-2" />
-              {t("Logout")}
-            </span>
-          </div>
-          <VStack className="mx-4">
+          <VStack className="mx-4 pt-5">
             <Avatar
               boxSize="80px"
               name={props.name}
@@ -90,14 +72,13 @@ export default function UserSetting(props: { name: string; avatar?: string; widt
             >
               {props.name}
             </span>
-            <UserBalance />
           </VStack>
           <VStack className={clsx("mx-4 pb-1")} pt="5" spacing="0">
-            <div className="w-full">
+          <div className="w-full">
               <SettingModal
                 tabMatch={useTabMatch("user")}
                 headerTitle={t("SettingPanel.UserCenter")}
-                currentTab={TabKeys.UserInfo}
+                currentTab={TabKeys.PAT}
               >
                 <div
                   className={clsx(
@@ -110,28 +91,6 @@ export default function UserSetting(props: { name: string; avatar?: string; widt
                   <span className="flex items-center">
                     <UserIcon fontSize={20} mr={3} />
                     {t("SettingPanel.UserCenter")}
-                  </span>
-                  <ChevronRightIcon />
-                </div>
-              </SettingModal>
-            </div>
-            <div className="w-full">
-              <SettingModal
-                tabMatch={useTabMatch("usage")}
-                headerTitle={t("SettingPanel.Usage")}
-                currentTab={TabKeys.CostOverview}
-              >
-                <div
-                  className={clsx(
-                    "flex h-[42px] cursor-pointer items-center justify-between rounded px-[9px] text-lg",
-                    darkMode
-                      ? "!text-white hover:bg-grayModern-600"
-                      : "!text-grayModern-600 hover:bg-[#F4F6F8]",
-                  )}
-                >
-                  <span className="flex items-center space-x-3">
-                    <WalletIcon color={darkMode ? "white" : "#5A646E"} />
-                    <p>{t("SettingPanel.Usage")}</p>
                   </span>
                   <ChevronRightIcon />
                 </div>

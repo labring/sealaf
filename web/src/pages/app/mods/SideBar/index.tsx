@@ -49,12 +49,7 @@ export default function SideBar() {
       pageId: Pages.database,
       name: String(t("CollectionPanel.Collection")),
       icon: <Icons type="database" />,
-    },
-    {
-      pageId: Pages.storage,
-      name: String(t("StoragePanel.Storage")),
-      icon: <Icons type="storage" />,
-    },
+    }
   ];
 
   const BOTTOM_ICONS: TIcon[] = [

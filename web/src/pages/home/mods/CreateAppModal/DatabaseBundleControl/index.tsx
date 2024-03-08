@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  HStack,
   Slider,
   SliderFilledTrack,
   SliderMark,
@@ -24,7 +23,6 @@ export default function DatabaseBundleControl(props: {
   originCapacity?: number;
   resourceOptions: any;
   type: "create" | "change";
-  defaultDatabaseCapacity?: number;
   defaultDedicatedDatabaseBundle?: any;
   onBundleItemChange: (k: string, v?: number) => any;
 }) {
@@ -33,50 +31,16 @@ export default function DatabaseBundleControl(props: {
     type,
     onBundleItemChange,
     resourceOptions,
-    defaultDatabaseCapacity,
-    defaultDedicatedDatabaseBundle,
     originCapacity,
   } = props;
   const { t } = useTranslation();
   const darkMode = useColorMode().colorMode === COLOR_MODE.dark;
-  const { regions } = useGlobalStore();
-  const currentRegion = useMemo(() => regions?.[0], [regions]);
-
-  const [databaseType, setDatabaseType] = useState<"dedicated" | "shared">(
-    (type === "change" && bundle.dedicatedDatabase) ||
-      (type === "create" && currentRegion?.dedicatedDatabase)
-      ? "dedicated"
-      : "shared",
-  );
-
-  const disabledChangeType = useMemo(
-    () => type === "change" || !currentRegion?.dedicatedDatabase,
-    [type, currentRegion],
-  );
-
-  useEffect(() => {
-    if (type === "create" && currentRegion) {
-      setDatabaseType(currentRegion?.dedicatedDatabase ? "dedicated" : "shared");
-    }
-  }, [currentRegion, type]);
 
   const { showInfo } = useGlobalStore(({ showInfo }) => ({ showInfo }));
 
   useEffect(() => {
-    if (databaseType === "dedicated") {
       showInfo(t("application.DatabaseCreateTip"), 5000);
-    }
-  }, [databaseType]);
-
-  useEffect(() => {
-    if (databaseType === "dedicated") {
-      onBundleItemChange("databaseCapacity", undefined);
-      onBundleItemChange("dedicatedDatabase", defaultDedicatedDatabaseBundle);
-    } else {
-      onBundleItemChange("dedicatedDatabase", undefined);
-      onBundleItemChange("databaseCapacity", defaultDatabaseCapacity);
-    }
-  }, [databaseType]);
+  }, []);
 
   const buildSlider = (props: {
     type: string;
@@ -148,33 +112,8 @@ export default function DatabaseBundleControl(props: {
           <TextIcon boxSize={4} mr={2} color={darkMode ? "" : "grayModern.600"} />
           <span className="text-lg font-semibold">{t("application.DatabaseSpecification")}</span>
         </div>
-        <HStack>
-          {(["dedicated", "shared"] as const).map((option) => (
-            <div
-              className={clsx("rounded-md pl-4", {
-                "text-[#219BF4]": databaseType === option,
-                "cursor-pointer": !disabledChangeType,
-                "cursor-not-allowed": disabledChangeType,
-              })}
-              key={option}
-              onClick={() => {
-                if (disabledChangeType) return;
-                setDatabaseType(option);
-              }}
-            >
-              <div>
-                <p className="text-lg">
-                  {option === "dedicated" && t("application.DedicatedType")}
-                  {option === "shared" && t("application.SharedType")}
-                </p>
-              </div>
-            </div>
-          ))}
-        </HStack>
       </div>
       <div className="pb-8">
-        {databaseType === "dedicated" && (
-          <>
             {buildSlider({
               type: "cpu",
               value: _.get(bundle, "dedicatedDatabase.cpu") as unknown as number,
@@ -202,24 +141,13 @@ export default function DatabaseBundleControl(props: {
             })}
             {buildSlider({
               type: "replicas",
-              disable: disabledChangeType,
+              disable: type === "change",
               value: _.get(bundle, "dedicatedDatabase.replicas") as unknown as number,
               specs: find(resourceOptions, { type: "dedicatedDatabaseReplicas" })?.specs || [],
               onChange: (value) => {
                 onBundleItemChange(`dedicatedDatabase.replicas`, value);
               },
             })}
-          </>
-        )}
-        {databaseType === "shared" &&
-          buildSlider({
-            type: "databaseCapacity",
-            value: _.get(bundle, "databaseCapacity"),
-            specs: find(resourceOptions, { type: "databaseCapacity" })?.specs || [],
-            onChange: (value) => {
-              onBundleItemChange("databaseCapacity", value);
-            },
-          })}
       </div>
     </div>
   );

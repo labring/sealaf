@@ -16,6 +16,7 @@ export default defineConfig(({ command, mode }) => {
       proxy: {
         "/v1": {
           target: env.VITE_DEV_SERVER_URL,
+          secure: false,
           changeOrigin: true,
         },
       },

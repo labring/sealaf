@@ -60,8 +60,9 @@ request.interceptors.response.use(
       // handle error code
       const { data } = error.response;
       if (data.statusCode === 401) {
+        localStorage.removeItem("token");
         // eslint-disable-next-line no-restricted-globals
-        (window as any).location.href = (VITE_SERVER_BASE_URL + "/login") as string;
+        (window as any).location.href = (VITE_SERVER_BASE_URL + "/") as string;
         return data;
       } else if (data.statusCode === 403) {
         toast({
