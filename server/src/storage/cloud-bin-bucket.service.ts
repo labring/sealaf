@@ -20,7 +20,7 @@ export class CloudBinBucketService {
   async ensureCloudBinBucket(appid: string) {
     const user = await this.clusterService.getUserByAppid(appid)
     const shortName = `cloud-bin`
-    const bucketName = `${appid}-${shortName}`
+    const bucketName = `sealaf-${appid}-${shortName}`
     try {
       const bucket = await this.clusterService.getStorageBucket(user, bucketName)
       assert(bucket, `bucket ${bucketName} in ${user.namespace} is not ready, wait`)
@@ -37,7 +37,7 @@ export class CloudBinBucketService {
   async deleteCloudBinBucket(appid: string) {
     const user = await this.clusterService.getUserByAppid(appid)
     const shortName = `cloud-bin`
-    const bucketName = `${appid}-${shortName}`
+    const bucketName = `sealaf-${appid}-${shortName}`
 
     const res = await this.clusterService.deleteStorageBucket(user, bucketName)
     this.logger.warn(`delete cloud-bin bucket ${bucketName} for app ${appid}`)

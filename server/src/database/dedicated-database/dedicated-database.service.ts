@@ -26,7 +26,6 @@ const getDedicatedDatabaseName = (appid: string) => `sealaf-${appid}`
 export class DedicatedDatabaseService {
   constructor(
     private readonly cluster: ClusterService,
-    private readonly regionService: RegionService,
     private readonly mongoService: MongoService,
   ) { }
 
@@ -36,7 +35,7 @@ export class DedicatedDatabaseService {
     await db.collection<DedicatedDatabase>('DedicatedDatabase').insertOne(
       {
         appid,
-        name: appid,
+        name: `sealaf-${appid}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         lockedAt: TASK_LOCK_INIT_TIME,
