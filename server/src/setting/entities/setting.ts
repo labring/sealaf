@@ -10,21 +10,14 @@ export enum SettingKey {
   SiteFavicon = 'site_favicon',
   SiteUrl = 'site_url',
   SiteFooter = 'site_footer',
-  InvitationProfit = 'invitation_profit',
-  IdVerify = 'id_verify',
-  DefaultUserQuota = 'default_user_quota',
-  SignupBonus = 'signup_bonus',
 
   AiPilotUrl = 'ai_pilot_url',
   LafForumUrl = 'laf_forum_url',
   LafBusinessUrl = 'laf_business_url',
   LafDiscordUrl = 'laf_discord_url',
   LafWeChatUrl = 'laf_wechat_url',
-  LafStatusUrl = 'laf_status_url',
   LafAboutUsUrl = 'laf_about_us_url',
   LafDocUrl = 'laf_doc_url',
-
-  EnableWebPromoPage = 'enable_web_promo_page',
 }
 
 export class Setting {
