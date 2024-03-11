@@ -10,7 +10,7 @@ export class SigninDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  @Length(3, 64)
+  @Length(1, 64)
   username: string
 
   @ApiProperty()
