@@ -32,7 +32,7 @@ export class ApplicationTaskService {
     private readonly configurationService: ApplicationConfigurationService,
     private readonly bundleService: BundleService,
     private readonly cloudbinService: CloudBinBucketService
-  ) {}
+  ) { }
 
   @Cron(CronExpression.EVERY_SECOND)
   async tick() {
@@ -82,6 +82,25 @@ export class ApplicationTaskService {
     const app = res.value
     const appid = app.appid
 
+    // if waiting time is more than 5 minutes, delete the application
+    const waitingTime = Date.now() - app.updatedAt.getTime()
+    if (waitingTime > 1000 * 60 * 5) {
+      await db.collection<Application>('Application').updateOne(
+        { appid, phase: ApplicationPhase.Creating },
+        {
+          $set: {
+            state: ApplicationState.Deleted,
+            phase: ApplicationPhase.Deleting,
+            lockedAt: TASK_LOCK_INIT_TIME,
+            updatedAt: new Date(),
+          },
+        },
+      )
+
+      this.logger.log(`${app.appid} updated to state Deleted due to timeout`)
+      return
+    }
+
     this.logger.log(`handleCreatingPhase matched app ${appid}, locked it`)
 
     // get region by appid
@@ -97,7 +116,7 @@ export class ApplicationTaskService {
 
     // waiting resources' phase to be `Created`
     if (runtimeDomain?.phase !== DomainPhase.Created) {
-      return await this.unlock(appid)
+      return
     }
 
     // update application phase to `Created`
