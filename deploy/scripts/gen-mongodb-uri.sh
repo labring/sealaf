@@ -13,6 +13,6 @@ password=$(echo "$secret_data" | awk -F': ' '/password/ {print $2}')
 port=$(echo "$secret_data" | awk -F': ' '/port/ {print $2}')
 username=$(echo "$secret_data" | awk -F': ' '/username/ {print $2}')
 
-mongodb_uri="mongodb://$username:$password@$headlessEndpoint"
+mongodb_uri="mongodb://$username:$password@$headlessEndpoint/sys_db?authSource=admin&replicaSet=sealaf-mongodb-mongodb&w=majority"
 
 echo "$mongodb_uri"
