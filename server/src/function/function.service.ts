@@ -345,7 +345,7 @@ export class FunctionService {
    * @returns
    */
   getInClusterRuntimeUrl(user: User, appid: string) {
-    const serviceName = appid
+    const serviceName = `sealaf-${appid}`
     const namespace = user.namespace
     const appAddress = `${serviceName}.${namespace}:8000`
 
