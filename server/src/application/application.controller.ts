@@ -50,6 +50,7 @@ import { User } from 'src/user/entities/user'
 import { isEqual } from 'lodash'
 import { InstanceService } from 'src/instance/instance.service'
 import { BindCustomDomainDto } from './dto/bind-custom-domain.dto'
+import { ClusterService } from 'src/region/cluster/cluster.service'
 
 @ApiTags('Application')
 @Controller('applications')
@@ -64,6 +65,7 @@ export class ApplicationController {
     private readonly region: RegionService,
     private readonly resource: ResourceService,
     private readonly runtimeDomain: RuntimeDomainService,
+    private readonly clusterService: ClusterService
   ) {}
 
   /**
@@ -143,12 +145,22 @@ export class ApplicationController {
   @ApiOperation({ summary: 'Get an application by appid' })
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get(':appid')
-  async findOne(@Param('appid') appid: string) {
+  async findOne(@Param('appid') appid: string, @InjectUser() user: User) {
     const data = await this.application.findOne(appid)
 
     // SECURITY ALERT!!!
     // DO NOT response this region object to client since it contains sensitive information
     const region = await this.region.findOne(data.regionId)
+    
+    let storage = {}
+    const storageUser = await this.clusterService.getStorageConf(user)
+    if (storageUser) {
+      storage = {
+        endpoint: storageUser.external,
+        accessKey: storageUser.accessKey,
+        secretKey: storageUser.secretKey
+      }
+    }
 
     // Generate the develop token, it's provided to the client when debugging function
     const expires = 60 * 60 * 24 * 7
@@ -160,6 +172,7 @@ export class ApplicationController {
 
     const res = {
       ...data,
+      storage,
       port: region.gatewayConf.port,
       develop_token: develop_token,
 
