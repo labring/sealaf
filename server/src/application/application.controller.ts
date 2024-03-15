@@ -65,7 +65,7 @@ export class ApplicationController {
     private readonly region: RegionService,
     private readonly resource: ResourceService,
     private readonly runtimeDomain: RuntimeDomainService,
-    private readonly clusterService: ClusterService
+    private readonly clusterService: ClusterService,
   ) {}
 
   /**
@@ -151,14 +151,14 @@ export class ApplicationController {
     // SECURITY ALERT!!!
     // DO NOT response this region object to client since it contains sensitive information
     const region = await this.region.findOne(data.regionId)
-    
+
     let storage = {}
     const storageUser = await this.clusterService.getStorageConf(user)
     if (storageUser) {
       storage = {
         endpoint: storageUser.external,
         accessKey: storageUser.accessKey,
-        secretKey: storageUser.secretKey
+        secretKey: storageUser.secretKey,
       }
     }
 
@@ -213,8 +213,6 @@ export class ApplicationController {
     if (dto.state === ApplicationState.Deleted) {
       throw new ForbiddenException('cannot update state to deleted')
     }
-    const userid = app.createdBy
-
 
     // check: only running application can restart
     if (
@@ -313,7 +311,6 @@ export class ApplicationController {
     ) {
       return ResponseUtil.error('cannot change database replicas')
     }
-
 
     const doc = await this.application.updateBundle(appid, dto, isTrialTier)
 

@@ -14,7 +14,7 @@ type SITE_KEY =
   | "laf_discord_url"
   | "laf_wechat_url"
   | "laf_doc_url"
-  | "laf_about_us_url"
+  | "laf_about_us_url";
 
 type State = {
   siteSettings: {

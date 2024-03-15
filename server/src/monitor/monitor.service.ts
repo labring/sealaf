@@ -19,15 +19,11 @@ export enum MonitorMetric {
 export class MonitorService {
   constructor(
     private readonly httpService: HttpService,
-    private readonly clusterService: ClusterService
-  ) { }
+    private readonly clusterService: ClusterService,
+  ) {}
   private readonly logger = new Logger(MonitorService.name)
 
-  async getData(
-    appid: string,
-    metrics: MonitorMetric[],
-    isRange: boolean,
-  ) {
+  async getData(appid: string, metrics: MonitorMetric[], isRange: boolean) {
     const endpoint = ServerConfig.APP_MONITOR_URL
     if (!endpoint) {
       this.logger.warn('Metrics not available for no endpoint')
@@ -37,17 +33,21 @@ export class MonitorService {
 
     const data = {}
     const res = metrics.map(async (metric) => {
-      data[metric] =
-        !isRange
-          ? await this.query(endpoint, appid, metric, user)
-          : await this.queryRange(endpoint, appid, metric, user)
+      data[metric] = !isRange
+        ? await this.query(endpoint, appid, metric, user)
+        : await this.queryRange(endpoint, appid, metric, user)
     })
 
     await Promise.all(res)
     return data
   }
 
-  private async query(endpoint: string, appid: string, type: string, user: User) {
+  private async query(
+    endpoint: string,
+    appid: string,
+    type: string,
+    user: User,
+  ) {
     const query = {
       type,
       launchPadName: `sealaf-${appid}`,
@@ -59,7 +59,7 @@ export class MonitorService {
     endpoint: string,
     appid: string,
     type: string,
-    user: User
+    user: User,
   ) {
     const range = 3600 // 1 hour
     const now = Math.floor(Date.now() / 1000)
@@ -72,17 +72,21 @@ export class MonitorService {
       end,
     }
 
-    return await this.queryInternal(endpoint, {
-      type,
-      launchPadName: `sealaf-${appid}`,
-      ...queryParams,
-    }, user)
+    return await this.queryInternal(
+      endpoint,
+      {
+        type,
+        launchPadName: `sealaf-${appid}`,
+        ...queryParams,
+      },
+      user,
+    )
   }
 
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number>,
-    user: User
+    user: User,
   ) {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
@@ -90,11 +94,11 @@ export class MonitorService {
           .get(endpoint, {
             params: {
               ...query,
-              namespace: user.namespace
+              namespace: user.namespace,
             },
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': encodeURIComponent(user.kubeconfig)
+              Authorization: encodeURIComponent(user.kubeconfig),
             },
           })
           .toPromise()

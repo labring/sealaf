@@ -1,4 +1,4 @@
-import { ClusterService } from 'src/region/cluster/cluster.service';
+import { ClusterService } from 'src/region/cluster/cluster.service'
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from '../region/region.service'
 import * as assert from 'node:assert'

@@ -13,7 +13,7 @@ const requestConfig = {
 export class DedicatedDatabaseMonitorService {
   private readonly logger = new Logger(DedicatedDatabaseMonitorService.name)
 
-  constructor(private readonly httpService: HttpService) { }
+  constructor(private readonly httpService: HttpService) {}
 
   async getResource(appid: string, user: User) {
     const dbName = this.getDBName(appid)
@@ -23,21 +23,21 @@ export class DedicatedDatabaseMonitorService {
       {
         labels: ['pod'],
       },
-      user
+      user,
     )
     const memory = await this.queryRange(
       `sum(container_memory_working_set_bytes{image!="",container!="",pod=~"${dbName}-mongo.+",namespace="${user.namespace}"}) by (pod)`,
       {
         labels: ['pod'],
       },
-      user
+      user,
     )
     const dataSize = await this.query(
       `sum(mongodb_dbstats_dataSize{pod=~"${dbName}-mongo.+"}) by (database)`,
       {
         labels: ['database'],
       },
-      user
+      user,
     )
 
     return {
@@ -50,9 +50,13 @@ export class DedicatedDatabaseMonitorService {
   async getConnection(appid: string, user: User) {
     const dbName = this.getDBName(appid)
     const query = `mongodb_connections{pod=~"${dbName}-mongo.+",state="current"}`
-    const connections = await this.queryRange(query, {
-      labels: ['pod'],
-    }, user)
+    const connections = await this.queryRange(
+      query,
+      {
+        labels: ['pod'],
+      },
+      user,
+    )
     return {
       connections,
     }
@@ -68,9 +72,13 @@ export class DedicatedDatabaseMonitorService {
     const res = await Promise.all(
       Object.keys(queries).map(async (key) => {
         const query = queries[key]
-        const data = await this.queryRange(query, {
-          labels: ['pod', 'type', 'state'],
-        }, user)
+        const data = await this.queryRange(
+          query,
+          {
+            labels: ['pod', 'type', 'state'],
+          },
+          user,
+        )
         return data
       }),
     )
@@ -89,7 +97,7 @@ export class DedicatedDatabaseMonitorService {
   private async query(
     query: string,
     queryParams: Record<string, number | string | string[]>,
-    user: User
+    user: User,
   ) {
     const endpoint = ServerConfig.DATABASE_MONITOR_URL
     if (!endpoint) return []
@@ -100,7 +108,7 @@ export class DedicatedDatabaseMonitorService {
   private async queryRange(
     query: string,
     queryParams: Record<string, number | string | string[]>,
-    user: User
+    user: User,
   ) {
     const endpoint = ServerConfig.DATABASE_MONITOR_URL
     if (!endpoint) return []
@@ -118,31 +126,39 @@ export class DedicatedDatabaseMonitorService {
       ...queryParams,
     }
 
-    return await this.queryInternal(endpoint, {
-      query,
-      ...queryParams,
-    }, user)
+    return await this.queryInternal(
+      endpoint,
+      {
+        query,
+        ...queryParams,
+      },
+      user,
+    )
   }
 
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number | string[]>,
-    user: User
+    user: User,
   ) {
     const labels = query.labels
     delete query['labels']
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {
         const res = await this.httpService
-          .post(endpoint, {
-            ...query,
-            namespace: user.namespace
-          }, {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': encodeURIComponent(user.kubeconfig)
+          .post(
+            endpoint,
+            {
+              ...query,
+              namespace: user.namespace,
             },
-          })
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: encodeURIComponent(user.kubeconfig),
+              },
+            },
+          )
           .toPromise()
 
         if (!labels || !Array.isArray(labels)) return res.data.data.result

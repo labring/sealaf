@@ -25,11 +25,7 @@ export class MonitorController {
     const { q: metrics, type } = dto
     const isRange = type === 'range'
 
-    const res = await this.monitorService.getData(
-      appid,
-      metrics,
-      isRange,
-    )
+    const res = await this.monitorService.getData(appid, metrics, isRange)
 
     return ResponseUtil.ok(res)
   }

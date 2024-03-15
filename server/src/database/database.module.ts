@@ -29,10 +29,6 @@ import { DatabaseController } from './database.controller'
     DedicatedDatabaseMonitorService,
     ApplicationListener,
   ],
-  exports: [
-    CollectionService,
-    MongoService,
-    DedicatedDatabaseService,
-  ],
+  exports: [CollectionService, MongoService, DedicatedDatabaseService],
 })
-export class DatabaseModule { }
+export class DatabaseModule {}

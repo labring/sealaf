@@ -18,7 +18,9 @@ export class CollectionService {
    * @returns
    */
   async create(appid: string, dto: CreateCollectionDto) {
-    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      appid,
+    )
     assert(db, 'Database not found')
     try {
       await db.createCollection(dto.name)
@@ -37,8 +39,9 @@ export class CollectionService {
    * @returns
    */
   async findAll(appid: string) {
-    const { db, client } =
-    await this.dedicatedDatabaseService.findAndConnect(appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      appid,
+    )
     assert(db, 'Database not found')
     try {
       const collections = await db.listCollections().toArray()
@@ -70,7 +73,9 @@ export class CollectionService {
    * @returns
    */
   async update(appid: string, name: string, dto: UpdateCollectionDto) {
-    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      appid,
+    )
     assert(db, 'Database not found')
 
     const command = {
@@ -108,7 +113,9 @@ export class CollectionService {
    * @returns
    */
   async remove(appid: string, name: string) {
-    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      appid,
+    )
     assert(db, 'Database not found')
     try {
       const res = await db.dropCollection(name)

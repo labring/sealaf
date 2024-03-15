@@ -5,11 +5,9 @@ import { Center, Spinner } from "@chakra-ui/react";
 
 import Header from "@/layouts/Header";
 import useGlobalStore from "@/pages/globalStore";
-import useSiteSettingStore from "@/pages/siteSetting";
 
 export default function BasicLayout() {
-  const { init, loading, userInfo } = useGlobalStore((state) => state);
-  const { siteSettings } = useSiteSettingStore((state) => state);
+  const { init, loading } = useGlobalStore((state) => state);
 
   useEffect(() => {
     init();

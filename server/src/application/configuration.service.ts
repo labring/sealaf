@@ -26,8 +26,9 @@ export class ApplicationConfigurationService {
   }
 
   async publish(conf: ApplicationConfiguration) {
-    const database =
-      await this.dedicatedDatabaseService.findAndConnect(conf.appid)
+    const database = await this.dedicatedDatabaseService.findAndConnect(
+      conf.appid,
+    )
     const { db, client } = database
     const session = client.startSession()
     try {

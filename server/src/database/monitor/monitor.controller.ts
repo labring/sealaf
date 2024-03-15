@@ -17,9 +17,7 @@ import { User } from 'src/user/entities/user'
 @ApiBearerAuth('Authorization')
 @Controller('apps/:appid/dedicated-database/monitor')
 export class DedicatedDatabaseMonitorController {
-  constructor(
-    private readonly monitor: DedicatedDatabaseMonitorService,
-  ) { }
+  constructor(private readonly monitor: DedicatedDatabaseMonitorService) {}
 
   @ApiOperation({
     summary: 'Get dedicated database resources metrics data',
@@ -27,7 +25,10 @@ export class DedicatedDatabaseMonitorController {
   @ApiResponse({ type: ResponseUtil })
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('resource')
-  async getResource(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
+  async getResource(
+    @InjectApplication() app: ApplicationWithRelations,
+    @InjectUser() user: User,
+  ) {
     const res = await this.monitor.getResource(app.appid, user)
     return ResponseUtil.ok(res)
   }
@@ -36,7 +37,10 @@ export class DedicatedDatabaseMonitorController {
   @ApiResponse({ type: ResponseUtil })
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('connection')
-  async getConnection(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
+  async getConnection(
+    @InjectApplication() app: ApplicationWithRelations,
+    @InjectUser() user: User,
+  ) {
     const res = await this.monitor.getConnection(app.appid, user)
     return ResponseUtil.ok(res)
   }
@@ -45,7 +49,10 @@ export class DedicatedDatabaseMonitorController {
   @ApiResponse({ type: ResponseUtil })
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get('performance')
-  async getPerformance(@InjectApplication() app: ApplicationWithRelations, @InjectUser() user: User) {
+  async getPerformance(
+    @InjectApplication() app: ApplicationWithRelations,
+    @InjectUser() user: User,
+  ) {
     const res = await this.monitor.getPerformance(app.appid, user)
     return ResponseUtil.ok(res)
   }

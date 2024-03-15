@@ -49,7 +49,7 @@ export default function SideBar() {
       pageId: Pages.database,
       name: String(t("CollectionPanel.Collection")),
       icon: <Icons type="database" />,
-    }
+    },
   ];
 
   const BOTTOM_ICONS: TIcon[] = [

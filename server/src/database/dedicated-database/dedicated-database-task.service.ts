@@ -21,7 +21,7 @@ export class DedicatedDatabaseTaskService {
     private readonly regionService: RegionService,
     private readonly clusterService: ClusterService,
     private readonly dbService: DedicatedDatabaseService,
-  ) { }
+  ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
   async tick() {

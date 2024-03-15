@@ -1,4 +1,4 @@
-import { cloneElement, ReactElement, useEffect, useMemo, useState } from "react";
+import { cloneElement, ReactElement, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Button,
@@ -12,7 +12,6 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Spinner,
   useDisclosure,
   VStack,
 } from "@chakra-ui/react";
@@ -35,9 +34,7 @@ import {
   ApplicationControllerUpdateBundle,
   ApplicationControllerUpdateName,
 } from "@/apis/v1/applications";
-import {
-  ResourceControllerGetResourceOptions,
-} from "@/apis/v1/resources";
+import { ResourceControllerGetResourceOptions } from "@/apis/v1/resources";
 import useGlobalStore from "@/pages/globalStore";
 
 type FormData = {
@@ -110,7 +107,6 @@ const CreateAppModal = (props: {
     setFocus,
     reset,
     formState: { errors },
-    getValues,
   } = useForm<FormData>({
     defaultValues,
   });
@@ -131,7 +127,7 @@ const CreateAppModal = (props: {
       replicas:
         application?.bundle.resource.dedicatedDatabase?.replicas ||
         sortedBundles[0].spec.dedicatedDatabaseReplicas.value,
-    }
+    },
   };
 
   const defaultAutoscaling: TypeAutoscaling = {
@@ -319,27 +315,25 @@ const CreateAppModal = (props: {
             </ModalBody>
             <ModalFooter h={20}>
               <HStack spacing={0} w="full" justify="flex-end" px="8">
-                  {type !== "edit" && (
-                    <Button
-                      isLoading={createAppMutation.isLoading}
-                      type="submit"
-                      onClick={handleSubmit(onSubmit)}
-                    >
-                      {type === "change"
-                        ? t("Confirm")
-                        : t("CreateNow")}
-                    </Button>
-                  )}
-                  {type === "edit" && (
-                    <Button
-                      isLoading={updateAppMutation.isLoading}
-                      type="submit"
-                      onClick={handleSubmit(onSubmit)}
-                    >
-                      {t("Confirm")}
-                    </Button>
-                  )}
-                </HStack>
+                {type !== "edit" && (
+                  <Button
+                    isLoading={createAppMutation.isLoading}
+                    type="submit"
+                    onClick={handleSubmit(onSubmit)}
+                  >
+                    {type === "change" ? t("Confirm") : t("CreateNow")}
+                  </Button>
+                )}
+                {type === "edit" && (
+                  <Button
+                    isLoading={updateAppMutation.isLoading}
+                    type="submit"
+                    onClick={handleSubmit(onSubmit)}
+                  >
+                    {t("Confirm")}
+                  </Button>
+                )}
+              </HStack>
             </ModalFooter>
           </ModalContent>
         </Modal>

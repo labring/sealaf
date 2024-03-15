@@ -13,8 +13,8 @@ export class CloudBinBucketService {
 
   constructor(
     private readonly regionService: RegionService,
-    private readonly clusterService: ClusterService
-  ) { }
+    private readonly clusterService: ClusterService,
+  ) {}
 
   // get cloud-bin bucket or create it if not exists
   async ensureCloudBinBucket(appid: string) {
@@ -22,13 +22,23 @@ export class CloudBinBucketService {
     const shortName = `cloud-bin`
     const bucketName = `sealaf-${appid}-${shortName}`
     try {
-      const bucket = await this.clusterService.getStorageBucket(user, bucketName)
-      assert(bucket, `bucket ${bucketName} in ${user.namespace} is not ready, wait`)
+      const bucket = await this.clusterService.getStorageBucket(
+        user,
+        bucketName,
+      )
+      assert(
+        bucket,
+        `bucket ${bucketName} in ${user.namespace} is not ready, wait`,
+      )
       return bucket
-    } catch { }
+    } catch {}
 
     // create cloud-bin bucket in db
-    const created = await this.clusterService.createStorageBucket(user, bucketName, "private")
+    const created = await this.clusterService.createStorageBucket(
+      user,
+      bucketName,
+      'private',
+    )
     this.logger.log(`creating cloud-bin bucket ${bucketName} for app ${appid}`)
 
     return created

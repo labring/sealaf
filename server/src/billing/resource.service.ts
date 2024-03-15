@@ -98,10 +98,7 @@ export class ResourceService {
     const cpu = bundle.spec.cpu.value
     const memory = bundle.spec.memory.value
 
-    if (
-      cpu === input.cpu &&
-      memory === input.memory 
-    ) {
+    if (cpu === input.cpu && memory === input.memory) {
       return true
     }
 

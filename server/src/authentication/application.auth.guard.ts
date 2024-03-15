@@ -11,9 +11,7 @@ import { User } from 'src/user/entities/user'
 @Injectable()
 export class ApplicationAuthGuard implements CanActivate {
   logger = new Logger(ApplicationAuthGuard.name)
-  constructor(
-    private readonly appService: ApplicationService,
-  ) {}
+  constructor(private readonly appService: ApplicationService) {}
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest() as IRequest

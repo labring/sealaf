@@ -1,13 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import {
-  IsArray,
-  IsEnum,
-  IsIn,
-  IsNumber,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator'
+import { IsArray, IsEnum, IsIn, IsString } from 'class-validator'
 import { MonitorMetric } from '../monitor.service'
 
 export class QueryMetricsDto {

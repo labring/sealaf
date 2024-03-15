@@ -5,10 +5,7 @@ import { ResourceController } from './resource.controller'
 
 @Module({
   controllers: [ResourceController],
-  providers: [
-    BillingService,
-    ResourceService,
-  ],
+  providers: [BillingService, ResourceService],
   exports: [BillingService, ResourceService],
 })
 export class BillingModule {}

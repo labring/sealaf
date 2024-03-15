@@ -23,8 +23,8 @@ export class InstanceService {
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
     private readonly applicationService: ApplicationService,
     private readonly cloudbin: CloudBinBucketService,
-  ) { }
-  
+  ) {}
+
   getAppDeployName(appid: string) {
     return `sealaf-${appid}`
   }
@@ -71,10 +71,7 @@ export class InstanceService {
     }
 
     if (hpa) {
-      await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(
-        name,
-        namespace
-      )
+      await hpaV2Api.deleteNamespacedHorizontalPodAutoscaler(name, namespace)
     }
 
     this.logger.log(`remove k8s deployment ${deployment?.metadata?.name}`)
@@ -109,7 +106,7 @@ export class InstanceService {
     )
     const appsV1Api = this.cluster.makeAppsV1Api(user)
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
-     this.getAppDeployName(appid),
+      this.getAppDeployName(appid),
       user.namespace,
       deployment,
     )
@@ -198,7 +195,10 @@ export class InstanceService {
     const coreV1Api = this.cluster.makeCoreV1Api(user)
     try {
       const serviceName = this.getAppDeployName(appid)
-      const res = await coreV1Api.readNamespacedService(serviceName, user.namespace)
+      const res = await coreV1Api.readNamespacedService(
+        serviceName,
+        user.namespace,
+      )
       return res.body
     } catch (error) {
       if (error?.response?.body?.reason === 'NotFound') return null
@@ -210,9 +210,7 @@ export class InstanceService {
     const spec: V1ServiceSpec = {
       selector: labels,
       type: 'ClusterIP',
-      ports: [
-        { port: 8000, targetPort: 8000, protocol: 'TCP', name: 'http' },
-      ],
+      ports: [{ port: 8000, targetPort: 8000, protocol: 'TCP', name: 'http' }],
     }
     return spec
   }
@@ -221,7 +219,7 @@ export class InstanceService {
     app: ApplicationWithRelations,
     labels: Record<string, string>,
   ): Promise<V1DeploymentSpec> {
-    const { appid, region, user} = app
+    const { appid, region, user } = app
     assert(region, 'region is required')
 
     // prepare params
@@ -250,7 +248,7 @@ export class InstanceService {
 
     const NODE_MODULES_PULL_URL =
       await this.cloudbin.getNodeModulesCachePullUrl(appid)
-    
+
     const storageConf = await this.cluster.getStorageConf(user)
 
     const env = [
@@ -261,11 +259,11 @@ export class InstanceService {
       { name: 'OSS_ACCESS_SECRET', value: storageConf.secretKey },
       {
         name: 'OSS_INTERNAL_ENDPOINT',
-        value: storageConf.internal
+        value: storageConf.internal,
       },
       {
         name: 'OSS_EXTERNAL_ENDPOINT',
-        value: storageConf.external
+        value: storageConf.external,
       },
       { name: 'OSS_REGION', value: region.name },
       {
@@ -313,9 +311,7 @@ export class InstanceService {
               command: ['sh', '/app/start.sh'],
               name: appid,
               env,
-              ports: [
-                { containerPort: 8000, name: 'http' },
-              ],
+              ports: [{ containerPort: 8000, name: 'http' }],
               resources: {
                 limits: {
                   cpu: `${limitCpu}m`,

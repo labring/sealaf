@@ -7,7 +7,7 @@ import {
   Sse,
 } from '@nestjs/common'
 import http from 'http'
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { FunctionService } from '../function/function.service'
 import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
 import { ApplicationAuthGuard } from 'src/authentication/application.auth.guard'
@@ -40,7 +40,7 @@ export class LogController {
     @Param('podName') podName: string,
     @Query('containerName') containerName: string,
     @Param('appid') appid: string,
-    @InjectUser('user') user: User
+    @InjectUser('user') user: User,
   ) {
     if (!containerName) {
       containerName = appid
@@ -65,7 +65,6 @@ export class LogController {
       podNameList = undefined
     }
 
-    const region = await this.regionService.findByAppId(appid)
     const kc = this.clusterService.loadKubeConfig(user)
 
     return new Observable<MessageEvent>((subscriber) => {

@@ -13,8 +13,6 @@ import StatusBar from "../mods/StatusBar";
 import CollectionDataList from "./CollectionDataList";
 import CollectionListPanel from "./CollectionListPanel";
 
-import useDBMStore from "./store";
-
 import useCustomSettingStore from "@/pages/customSetting";
 function DatabasePage() {
   const containerRef = useRef<HTMLDivElement>(null);

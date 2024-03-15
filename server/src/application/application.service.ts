@@ -136,7 +136,7 @@ export class ApplicationService {
     const res = db
       .collection<Application>('Application')
       .aggregate()
-      .match({ createdBy: userid },)
+      .match({ createdBy: userid })
       .lookup({
         from: 'ApplicationBundle',
         localField: 'appid',

@@ -20,13 +20,7 @@ import { AuthenticationController } from './authentication.controller'
     UserModule,
     HttpModule,
   ],
-  providers: [
-    JwtStrategy,
-    PatService,
-    AuthenticationService,
-  ],
-  controllers: [
-    AuthenticationController,
-  ],
+  providers: [JwtStrategy, PatService, AuthenticationService],
+  controllers: [AuthenticationController],
 })
 export class AuthenticationModule {}

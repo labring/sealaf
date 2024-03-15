@@ -6,11 +6,7 @@ import { UserController } from './user.controller'
 import { ApplicationService } from 'src/application/application.service'
 
 @Module({
-  providers: [
-    UserService,
-    PatService,
-    ApplicationService,
-  ],
+  providers: [UserService, PatService, ApplicationService],
   exports: [UserService],
   controllers: [PatController, UserController],
 })

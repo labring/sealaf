@@ -26,20 +26,14 @@ export default function DatabaseBundleControl(props: {
   defaultDedicatedDatabaseBundle?: any;
   onBundleItemChange: (k: string, v?: number) => any;
 }) {
-  const {
-    bundle,
-    type,
-    onBundleItemChange,
-    resourceOptions,
-    originCapacity,
-  } = props;
+  const { bundle, type, onBundleItemChange, resourceOptions, originCapacity } = props;
   const { t } = useTranslation();
   const darkMode = useColorMode().colorMode === COLOR_MODE.dark;
 
   const { showInfo } = useGlobalStore(({ showInfo }) => ({ showInfo }));
 
   useEffect(() => {
-      showInfo(t("application.DatabaseCreateTip"), 5000);
+    showInfo(t("application.DatabaseCreateTip"), 5000);
   }, []);
 
   const buildSlider = (props: {
@@ -114,40 +108,40 @@ export default function DatabaseBundleControl(props: {
         </div>
       </div>
       <div className="pb-8">
-            {buildSlider({
-              type: "cpu",
-              value: _.get(bundle, "dedicatedDatabase.cpu") as unknown as number,
-              specs: find(resourceOptions, { type: "dedicatedDatabaseCPU" })?.specs || [],
-              onChange: (value) => {
-                onBundleItemChange(`dedicatedDatabase.cpu`, value);
-              },
-            })}
-            {buildSlider({
-              type: "memory",
-              value: _.get(bundle, "dedicatedDatabase.memory") as unknown as number,
-              specs: find(resourceOptions, { type: "dedicatedDatabaseMemory" })?.specs || [],
-              onChange: (value) => {
-                onBundleItemChange(`dedicatedDatabase.memory`, value);
-              },
-            })}
-            {buildSlider({
-              type: "capacity",
-              min: originCapacity,
-              value: _.get(bundle, "dedicatedDatabase.capacity") as unknown as number,
-              specs: find(resourceOptions, { type: "dedicatedDatabaseCapacity" })?.specs || [],
-              onChange: (value) => {
-                onBundleItemChange(`dedicatedDatabase.capacity`, value);
-              },
-            })}
-            {buildSlider({
-              type: "replicas",
-              disable: type === "change",
-              value: _.get(bundle, "dedicatedDatabase.replicas") as unknown as number,
-              specs: find(resourceOptions, { type: "dedicatedDatabaseReplicas" })?.specs || [],
-              onChange: (value) => {
-                onBundleItemChange(`dedicatedDatabase.replicas`, value);
-              },
-            })}
+        {buildSlider({
+          type: "cpu",
+          value: _.get(bundle, "dedicatedDatabase.cpu") as unknown as number,
+          specs: find(resourceOptions, { type: "dedicatedDatabaseCPU" })?.specs || [],
+          onChange: (value) => {
+            onBundleItemChange(`dedicatedDatabase.cpu`, value);
+          },
+        })}
+        {buildSlider({
+          type: "memory",
+          value: _.get(bundle, "dedicatedDatabase.memory") as unknown as number,
+          specs: find(resourceOptions, { type: "dedicatedDatabaseMemory" })?.specs || [],
+          onChange: (value) => {
+            onBundleItemChange(`dedicatedDatabase.memory`, value);
+          },
+        })}
+        {buildSlider({
+          type: "capacity",
+          min: originCapacity,
+          value: _.get(bundle, "dedicatedDatabase.capacity") as unknown as number,
+          specs: find(resourceOptions, { type: "dedicatedDatabaseCapacity" })?.specs || [],
+          onChange: (value) => {
+            onBundleItemChange(`dedicatedDatabase.capacity`, value);
+          },
+        })}
+        {buildSlider({
+          type: "replicas",
+          disable: type === "change",
+          value: _.get(bundle, "dedicatedDatabase.replicas") as unknown as number,
+          specs: find(resourceOptions, { type: "dedicatedDatabaseReplicas" })?.specs || [],
+          onChange: (value) => {
+            onBundleItemChange(`dedicatedDatabase.replicas`, value);
+          },
+        })}
       </div>
     </div>
   );

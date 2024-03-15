@@ -116,10 +116,7 @@ export default function BundleControl(props: {
                 onChange={() => {
                   onBundleItemChange("cpu", item.spec.cpu.value);
                   onBundleItemChange("memory", item.spec.memory.value);
-                  onBundleItemChange(
-                    "dedicatedDatabase.cpu",
-                    item.spec.dedicatedDatabaseCPU.value,
-                  );
+                  onBundleItemChange("dedicatedDatabase.cpu", item.spec.dedicatedDatabaseCPU.value);
                   onBundleItemChange(
                     "dedicatedDatabase.memory",
                     item.spec.dedicatedDatabaseMemory.value,

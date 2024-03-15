@@ -13,15 +13,7 @@ import {
 import clsx from "clsx";
 import { t } from "i18next";
 
-import {
-  ContactIcon,
-  DiscordIcon,
-  ExitIcon,
-  GroupIcon,
-  UserIcon,
-  WalletIcon,
-  WechatIcon,
-} from "@/components/CommonIcon";
+import { ContactIcon, DiscordIcon, GroupIcon, UserIcon, WechatIcon } from "@/components/CommonIcon";
 
 import useTabMatch from "./useTabMatch";
 
@@ -74,7 +66,7 @@ export default function UserSetting(props: { name: string; avatar?: string; widt
             </span>
           </VStack>
           <VStack className={clsx("mx-4 pb-1")} pt="5" spacing="0">
-          <div className="w-full">
+            <div className="w-full">
               <SettingModal
                 tabMatch={useTabMatch("user")}
                 headerTitle={t("SettingPanel.UserCenter")}

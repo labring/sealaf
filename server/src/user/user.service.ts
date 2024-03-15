@@ -20,11 +20,9 @@ export class UserService {
   }
 
   async findOneById(id: ObjectId) {
-    return this.db
-      .collection<User>('User')
-      .findOne({
-        _id: id
-      })
+    return this.db.collection<User>('User').findOne({
+      _id: id,
+    })
   }
 
   async findOneByNamespace(namespace: string) {

@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
+import { useRoutes } from "react-router-dom";
+import { wrapUseRoutes } from "@sentry/react";
 
 import BasicLayout from "@/layouts/Basic";
 import FunctionLayout from "@/layouts/Function";
 import TemplateLayout from "@/layouts/Template";
-import { useRoutes } from "react-router-dom";
-import { wrapUseRoutes } from "@sentry/react";
 
 const route404 = {
   path: "*",

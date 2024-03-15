@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Logger,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common'
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger'
+import { Controller, Logger, Param, Post, Req, UseGuards } from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { Policy, Proxy } from 'database-proxy/dist'
 import { ApplicationAuthGuard } from 'src/authentication/application.auth.guard'
 import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
@@ -25,7 +14,7 @@ export class DatabaseController {
 
   constructor(
     private readonly dedicatedDatabaseService: DedicatedDatabaseService,
-  ) { }
+  ) {}
 
   /**
    * The database proxy for database management
@@ -36,8 +25,9 @@ export class DatabaseController {
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Post('proxy')
   async proxy(@Param('appid') appid: string, @Req() req: IRequest) {
-    const accessor = await this.dedicatedDatabaseService.getDatabaseAccessor(appid)
-
+    const accessor = await this.dedicatedDatabaseService.getDatabaseAccessor(
+      appid,
+    )
 
     // Don't need policy rules, open all collections' access permission for dbm use.
     // Just create a empty policy for proxy.

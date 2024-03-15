@@ -15,9 +15,9 @@ export class AuthenticationController {
   constructor(
     private readonly authService: AuthenticationService,
     private readonly clusterService: ClusterService,
-    private readonly userService: UserService
-  ) { }
-  
+    private readonly userService: UserService,
+  ) {}
+
   @ApiOperation({ summary: 'Signin by kubeconfig' })
   @ApiResponse({ type: ResponseUtil })
   @Post('signin')
@@ -31,15 +31,16 @@ export class AuthenticationController {
     try {
       await api.readNamespace(user.namespace)
     } catch (e) {
-      return ResponseUtil.error("validate user failed")
+      return ResponseUtil.error('validate user failed')
     }
     let _user = await this.userService.findOneByNamespace(user.namespace)
     if (!_user) {
       _user = await this.userService.create(user)
+      // eslint-disable-next-line
       await this.clusterService.createStorageUser(user).catch(() => {})
     }
     const token = this.authService.getAccessTokenByUser(_user)
-    return ResponseUtil.ok({token, user})
+    return ResponseUtil.ok({ token, user })
   }
 
   /**

@@ -11,9 +11,7 @@ import { CalculatePriceDto } from './dto/calculate-price.dto'
 export class BillingService {
   private readonly db = SystemDatabase.db
 
-  constructor(
-    private readonly resource: ResourceService,
-  ) {}
+  constructor(private readonly resource: ResourceService) {}
 
   async calculatePrice(dto: CalculatePriceDto) {
     // get options by region id
@@ -74,9 +72,7 @@ export class BillingService {
     const ddbTotalPrice = ddbCPUPrice.add(ddbMemoryPrice).add(ddbCapacityPrice)
 
     // calculate total price
-    const totalPrice = cpuPrice
-      .add(memoryPrice)
-      .add(ddbTotalPrice)
+    const totalPrice = cpuPrice.add(memoryPrice).add(ddbTotalPrice)
 
     return {
       cpu: cpuPrice.toNumber(),
@@ -89,5 +85,4 @@ export class BillingService {
       total: totalPrice.toNumber(),
     }
   }
-
 }

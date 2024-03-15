@@ -49,31 +49,31 @@ export default function AppMonitor() {
           <Spinner />
         </Center>
       ) : monitorData?.data && Object.keys(monitorData?.data).length !== 0 ? (
-          <div className="mr-4 mt-10 h-[440px] w-full rounded-xl border bg-[#F8FAFB] pb-4">
-            <AreaCard
-              data={monitorData?.data?.cpu}
-              strokeColor="#47C8BF"
-              fillColor="#E6F6F6"
-              setDataNumber={setDataNumber}
-              dataNumber={dataNumber}
-              podsArray={podsArray}
-              title="CPU"
-              unit="Core"
-              maxValue={limitCPU / 1000}
-              className="h-1/2 p-4"
-            />
-            <AreaCard
-              data={monitorData?.data?.memory}
-              strokeColor="#9A8EE0"
-              fillColor="#F2F1FB"
-              title={t("Spec.RAM")}
-              unit="MB"
-              podsArray={podsArray}
-              maxValue={limitMemory}
-              dataNumber={dataNumber}
-              className="h-1/2 p-4"
-            />
-          </div>
+        <div className="mr-4 mt-10 h-[440px] w-full rounded-xl border bg-[#F8FAFB] pb-4">
+          <AreaCard
+            data={monitorData?.data?.cpu}
+            strokeColor="#47C8BF"
+            fillColor="#E6F6F6"
+            setDataNumber={setDataNumber}
+            dataNumber={dataNumber}
+            podsArray={podsArray}
+            title="CPU"
+            unit="Core"
+            maxValue={limitCPU / 1000}
+            className="h-1/2 p-4"
+          />
+          <AreaCard
+            data={monitorData?.data?.memory}
+            strokeColor="#9A8EE0"
+            fillColor="#F2F1FB"
+            title={t("Spec.RAM")}
+            unit="MB"
+            podsArray={podsArray}
+            maxValue={limitMemory}
+            dataNumber={dataNumber}
+            className="h-1/2 p-4"
+          />
+        </div>
       ) : (
         <Center className="h-[400px] w-full">
           <span className="flex flex-col items-center">

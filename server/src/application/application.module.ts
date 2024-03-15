@@ -21,12 +21,7 @@ import { PodService } from './pod.service'
 import { PodController } from './pod.controller'
 
 @Module({
-  imports: [
-    StorageModule,
-    DatabaseModule,
-    GatewayModule,
-    HttpModule,
-  ],
+  imports: [StorageModule, DatabaseModule, GatewayModule, HttpModule],
   controllers: [
     ApplicationController,
     EnvironmentVariableController,

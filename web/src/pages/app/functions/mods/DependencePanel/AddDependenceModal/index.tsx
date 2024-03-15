@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AddIcon, ExternalLinkIcon, InfoOutlineIcon, SearchIcon, SmallCloseIcon } from "@chakra-ui/icons";
+import {
+  AddIcon,
+  ExternalLinkIcon,
+  InfoOutlineIcon,
+  SearchIcon,
+  SmallCloseIcon,
+} from "@chakra-ui/icons";
 import {
   Box,
   Button,
@@ -336,7 +342,7 @@ const AddDependenceModal = () => {
             )}
           </ModalBody>
 
-          <ModalFooter justifyContent={'space-between'}>
+          <ModalFooter justifyContent={"space-between"}>
             <HStack>
               <span className="flex items-center text-grayModern-600">
                 <InfoOutlineIcon className="mx-1" />

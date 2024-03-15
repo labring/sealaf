@@ -31,8 +31,8 @@ export class ApplicationTaskService {
     private readonly functionService: FunctionService,
     private readonly configurationService: ApplicationConfigurationService,
     private readonly bundleService: BundleService,
-    private readonly cloudbinService: CloudBinBucketService
-  ) { }
+    private readonly cloudbinService: CloudBinBucketService,
+  ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
   async tick() {

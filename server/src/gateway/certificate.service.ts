@@ -23,16 +23,11 @@ export class CertificateService {
   // Create a certificate for app custom domain using cert-manager.io CRD
   async createRuntimeCertificate(user: User, runtimeDomain: RuntimeDomain) {
     const name = this.getRuntimeCertificateName(runtimeDomain)
-    return await this.create(
-      user,
-      name,
-      runtimeDomain.customDomain,
-      {
-        'cloud.sealos.io/app-deploy-manager': `sealaf-${runtimeDomain.appid}`,
-        'sealaf.dev/runtime-domain': runtimeDomain.customDomain,
-        [LABEL_KEY_APP_ID]: runtimeDomain.appid,
-      },
-    )
+    return await this.create(user, name, runtimeDomain.customDomain, {
+      'cloud.sealos.io/app-deploy-manager': `sealaf-${runtimeDomain.appid}`,
+      'sealaf.dev/runtime-domain': runtimeDomain.customDomain,
+      [LABEL_KEY_APP_ID]: runtimeDomain.appid,
+    })
   }
 
   // Delete a certificate for app custom domain using cert-manager.io CRD
@@ -81,21 +76,21 @@ export class CertificateService {
       spec: {
         acme: {
           server: 'https://acme-v02.api.letsencrypt.org/directory',
-            email: 'admin@sealos.io',
-            privateKeySecretRef: {
-              name: 'letsencrypt-prod'
+          email: 'admin@sealos.io',
+          privateKeySecretRef: {
+            name: 'letsencrypt-prod',
+          },
+          solvers: [
+            {
+              http01: {
+                ingress: {
+                  class: 'nginx',
+                  serviceType: 'ClusterIP',
+                },
+              },
             },
-            solvers: [
-              {
-                http01: {
-                  ingress: {
-                    class: 'nginx',
-                    serviceType: 'ClusterIP'
-                  }
-                }
-              }
-            ]
-        }
+          ],
+        },
       },
     })
     const res = await api.create({
@@ -113,8 +108,8 @@ export class CertificateService {
         dnsNames: [domain],
         issuerRef: {
           name,
-          kind: "Issuer"
-        }
+          kind: 'Issuer',
+        },
       },
     })
     return res.body

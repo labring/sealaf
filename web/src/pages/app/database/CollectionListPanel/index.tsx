@@ -43,9 +43,7 @@ export default function CollectionListPanel() {
   const [search, setSearch] = useState("");
 
   return (
-    <Panel
-      className="min-w-[200px] flex-grow overflow-hidden"
-    >
+    <Panel className="min-w-[200px] flex-grow overflow-hidden">
       <Panel.Header
         title={
           <div className="flex">
@@ -113,8 +111,7 @@ export default function CollectionListPanel() {
                     className={clsx(
                       "group h-7 hover:!text-primary-700",
                       darkMode ? "text-grayIron-200" : "text-grayIron-700",
-                        db?.name === store.currentDB?.name &&
-                        "!text-primary-700",
+                      db?.name === store.currentDB?.name && "!text-primary-700",
                     )}
                     onClick={() => {
                       store.setCurrentDB(db);

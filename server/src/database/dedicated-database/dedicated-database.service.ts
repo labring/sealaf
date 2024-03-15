@@ -26,7 +26,7 @@ export class DedicatedDatabaseService {
   constructor(
     private readonly cluster: ClusterService,
     private readonly mongoService: MongoService,
-  ) { }
+  ) {}
 
   async create(appid: string, session?: ClientSession) {
     const db = SystemDatabase.db

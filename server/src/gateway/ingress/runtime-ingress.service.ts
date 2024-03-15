@@ -12,7 +12,7 @@ export class RuntimeGatewayService {
   constructor(
     private readonly clusterService: ClusterService,
     private readonly certificate: CertificateService,
-  ) { }
+  ) {}
 
   getIngressName(domain: RuntimeDomain) {
     return `sealaf-${domain.appid}`
@@ -24,10 +24,7 @@ export class RuntimeGatewayService {
     const name = this.getIngressName(domain)
     const user = await this.clusterService.getUserByAppid(appid)
 
-    const ingress = await this.clusterService.getIngress(
-      user,
-      name,
-    )
+    const ingress = await this.clusterService.getIngress(user, name)
 
     return ingress
   }

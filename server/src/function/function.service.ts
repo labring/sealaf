@@ -234,7 +234,9 @@ export class FunctionService {
   }
 
   async publish(func: CloudFunction, oldFuncName?: string) {
-    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(func.appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      func.appid,
+    )
 
     const session = client.startSession()
     try {
@@ -253,7 +255,9 @@ export class FunctionService {
   }
 
   async publishMany(funcs: CloudFunction[]) {
-    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      funcs[0].appid,
+    )
 
     const session = client.startSession()
     try {
@@ -270,7 +274,9 @@ export class FunctionService {
   }
 
   async publishFunctionTemplateItems(funcs: CloudFunction[]) {
-    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(funcs[0].appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      funcs[0].appid,
+    )
 
     const session = client.startSession()
     try {
@@ -286,7 +292,9 @@ export class FunctionService {
   }
 
   async unpublish(appid: string, name: string) {
-    const { db, client } =await this.dedicatedDatabaseService.findAndConnect(appid)
+    const { db, client } = await this.dedicatedDatabaseService.findAndConnect(
+      appid,
+    )
     try {
       const coll = db.collection(CN_PUBLISHED_FUNCTIONS)
       await coll.deleteOne({ name })
@@ -352,7 +360,6 @@ export class FunctionService {
     const url = `http://${appAddress}`
     return url
   }
-
 
   async getHistory(func: CloudFunction) {
     const history = await this.db
