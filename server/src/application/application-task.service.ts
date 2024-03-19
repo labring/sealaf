@@ -43,16 +43,23 @@ export class ApplicationTaskService {
     // Phase `Creating` -> `Created`
     this.handleCreatingPhase().catch((err) => {
       this.logger.error(err)
+      // eslint-disable-next-line no-console
+      console.error(err)
     })
 
     // Phase `Deleting` -> `Deleted`
     this.handleDeletingPhase().catch((err) => {
       this.logger.error(err)
+      // eslint-disable-next-line no-console
+      console.error(err)
     })
 
     // State `Deleted`
     this.handleDeletedState().catch((err) => {
       this.logger.error(err)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      console.error(err)
     })
   }
 

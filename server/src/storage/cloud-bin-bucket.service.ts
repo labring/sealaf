@@ -49,7 +49,10 @@ export class CloudBinBucketService {
     const shortName = `cloud-bin`
     const bucketName = `sealaf-${appid}-${shortName}`
 
-    const res = await this.clusterService.deleteStorageBucket(user, bucketName)
+    const res = await this.clusterService
+      .deleteStorageBucket(user, bucketName)
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      .catch(() => {})
     this.logger.warn(`delete cloud-bin bucket ${bucketName} for app ${appid}`)
     return res
   }

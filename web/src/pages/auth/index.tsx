@@ -11,12 +11,6 @@ const AuthPage = () => {
   const { session, setSession, getKubeconfig, getNamespace } = useSessionStore();
 
   useEffect(() => {
-    if (localStorage.getItem("token")) {
-      window.location.href = "/dashboard";
-    }
-  }, []);
-
-  useEffect(() => {
     return createSealosApp();
   }, []);
 
@@ -37,11 +31,18 @@ const AuthPage = () => {
   });
 
   useEffect(() => {
-    if (session.user) {
+    const localNamespace = localStorage.getItem("sealos-namespace");
+    const localToken = localStorage.getItem("token");
+    const namespace = getNamespace();
+
+    if (session.user && namespace && localNamespace !== namespace) {
       signin().then((res) => {
         localStorage.setItem("token", res?.data.token);
+        localStorage.setItem("sealos-namespace", namespace);
         window.location.href = "/dashboard";
       });
+    } else if (localToken && namespace && localNamespace === namespace) {
+      window.location.href = "/dashboard";
     }
   }, [session]);
 

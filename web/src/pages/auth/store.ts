@@ -22,7 +22,7 @@ const useSessionStore = create<SessionState>()(
         return get().session?.kubeconfig || "";
       },
       getNamespace: () => {
-        if (get().session?.kubeconfig === "") {
+        if (!get().session?.kubeconfig) {
           return "";
         }
         const doc = yaml.load(get().session.kubeconfig);
