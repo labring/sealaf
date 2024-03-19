@@ -29,7 +29,13 @@ export class ClusterService {
     const conf = user.kubeconfig
     const kc = new k8s.KubeConfig()
     kc.loadFromString(conf)
-    kc.clusters[0].server = 'https://kubernetes.default.svc.cluster.local'
+    if (kc.clusters.length > 0) {
+      const cluster = {
+        ...kc.clusters[0],
+        server: 'https://kubernetes.default.svc.cluster.local'
+      }
+      kc.clusters = [cluster]
+    }
     return kc
   }
 
