@@ -377,6 +377,10 @@ export class InitializerService {
   }
 
   async createDatabaseIndexes() {
+    const existed = await this.db.collection<Region>('Region').countDocuments()
+    if (existed) {
+      return
+    }
     await this.db.collection<User>('User').createIndex(
       {
         namespace: 1,

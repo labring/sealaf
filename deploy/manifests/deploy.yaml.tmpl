@@ -36,7 +36,7 @@ spec:
             requests:
               cpu: 20m
               memory: 25Mi
-          image: docker.io/zacharywin/sealaf-web:0.0.7
+          image: docker.io/zacharywin/sealaf-web:0.0.11
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
@@ -82,6 +82,7 @@ spec:
         app: sealaf-server
         app.kubernetes.io/name: sealaf-server
     spec:
+      serviceAccountName: sealaf-sa
       containers:
         - name: sealaf-server
           ports:
@@ -95,7 +96,7 @@ spec:
             requests:
               cpu: 100m
               memory: 204Mi
-          image: docker.io/zacharywin/sealaf-server:0.0.10
+          image: docker.io/zacharywin/sealaf-server:0.0.20
           imagePullPolicy: Always
           env:
             - name: DATABASE_URL
