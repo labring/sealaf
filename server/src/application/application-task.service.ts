@@ -271,8 +271,13 @@ export class ApplicationTaskService {
    */
   async unlock(appid: string) {
     const db = SystemDatabase.db
-    await db
-      .collection<Application>('Application')
-      .updateOne({ appid: appid }, { $set: { lockedAt: TASK_LOCK_INIT_TIME } })
+    await db.collection<Application>('Application').updateOne(
+      { appid: appid },
+      {
+        $set: {
+          lockedAt: new Date(Date.now() - 1000 * (this.lockTimeout + 1)),
+        },
+      },
+    )
   }
 }
