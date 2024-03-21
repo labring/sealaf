@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import * as assert from 'node:assert'
-import { RegionService } from 'src/region/region.service'
 import { FunctionService } from 'src/function/function.service'
 import { FOREVER_IN_SECONDS, X_LAF_TRIGGER_TOKEN_KEY } from 'src/constants'
 import { TriggerService } from './trigger.service'
@@ -15,7 +14,6 @@ export class CronJobService {
 
   constructor(
     private readonly clusterService: ClusterService,
-    private readonly regionService: RegionService,
     private readonly funcService: FunctionService,
     private readonly triggerService: TriggerService,
   ) {}

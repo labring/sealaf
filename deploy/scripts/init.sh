@@ -39,6 +39,7 @@ kubectl create secret generic sealaf-config -n $NAMESPACE \
   --from-literal=APP_MONITOR_URL=${appMonitorUrl} \
   --from-literal=DATABASE_MONITOR_URL=${databaseMonitorUrl} || true
 
-kubectl apply -f manifests/deploy.yaml \
+kubectl apply -f manifests manifests/serviceaccount.yaml \
+  -f manifests/deploy.yaml \
   -f manifests/ingress.yaml \
   -f manifests/appcr.yaml
