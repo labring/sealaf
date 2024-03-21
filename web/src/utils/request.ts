@@ -4,6 +4,8 @@ import axios, { AxiosRequestHeaders, AxiosResponse } from "axios";
 
 import { CHAKRA_UI_COLOR_MODE_KEY, VITE_SERVER_BASE_URL } from "../constants";
 
+import useSessionStore from "@/pages/auth/store";
+
 const { toast } = createStandaloneToast();
 
 const request = axios.create({
@@ -22,6 +24,7 @@ request.interceptors.request.use(
     let _headers: AxiosRequestHeaders | any = {
       Authorization: "Bearer " + localStorage.getItem("token"),
       "Content-Type": "application/json",
+      Credential: btoa(useSessionStore().getKubeconfig()),
     };
 
     config.headers = {

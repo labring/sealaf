@@ -1,3 +1,5 @@
+import useSessionStore from "@/pages/auth/store";
+
 interface StreamFetchProps {
   url: string;
   onMessage: (text: string) => void;
@@ -13,6 +15,7 @@ export const streamFetch = ({ url, onMessage, firstResponse, abortSignal }: Stre
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer " + localStorage.getItem("token"),
+          Credential: btoa(useSessionStore().getKubeconfig()),
         },
         signal: abortSignal.signal,
       });
