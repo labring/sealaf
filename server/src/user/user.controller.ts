@@ -21,6 +21,7 @@ export class UserController {
   @ApiBearerAuth('Authorization')
   async getProfile(@Req() request: IRequest) {
     const user = {
+      _id: request.user._id,
       username: request.user.username,
       namespace: request.user.namespace,
     }

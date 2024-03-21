@@ -26,14 +26,13 @@ export class ClusterService {
   }
 
   loadKubeConfig(user?: UserWithKubeconfig) {
-    const conf = user.kubeconfig
     const kc = new k8s.KubeConfig()
-
     if (!user) {
       kc.loadFromDefault()
       return kc
     }
 
+    const conf = user.kubeconfig
     kc.loadFromString(conf)
     if (kc.clusters.length > 0) {
       const cluster = {

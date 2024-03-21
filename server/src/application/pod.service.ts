@@ -1,21 +1,17 @@
 import { V1Pod, V1PodList } from '@kubernetes/client-node'
 import { Injectable, Logger } from '@nestjs/common'
 import { ClusterService } from 'src/region/cluster/cluster.service'
-import { RegionService } from 'src/region/region.service'
 import http from 'http'
 import { PodNameListDto, ContainerNameListDto } from './dto/pod.dto'
 import { LABEL_KEY_APP_ID } from 'src/constants'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 @Injectable()
 export class PodService {
   private readonly logger = new Logger(PodService.name)
 
-  constructor(
-    private readonly regionService: RegionService,
-    private readonly cluster: ClusterService,
-  ) {}
-  async getPodNameListByAppid(appid: string) {
-    const user = await this.cluster.getUserByAppid(appid)
+  constructor(private readonly cluster: ClusterService) {}
+  async getPodNameListByAppid(user: UserWithKubeconfig, appid: string) {
     const coreV1Api = this.cluster.makeCoreV1Api(user)
     const res: { response: http.IncomingMessage; body: V1PodList } =
       await coreV1Api.listNamespacedPod(
@@ -33,8 +29,10 @@ export class PodService {
     return podNames
   }
 
-  async getContainerNameListByPodName(appid: string, podName: string) {
-    const user = await this.cluster.getUserByAppid(appid)
+  async getContainerNameListByPodName(
+    user: UserWithKubeconfig,
+    podName: string,
+  ) {
     const coreV1Api = this.cluster.makeCoreV1Api(user)
 
     const res: { response: http.IncomingMessage; body: V1Pod } =

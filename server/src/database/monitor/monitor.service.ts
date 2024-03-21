@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { ServerConfig } from 'src/constants'
-import { User } from 'src/user/entities/user'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 const requestConfig = {
   retryAttempts: 5,
@@ -15,7 +15,7 @@ export class DedicatedDatabaseMonitorService {
 
   constructor(private readonly httpService: HttpService) {}
 
-  async getResource(appid: string, user: User) {
+  async getResource(appid: string, user: UserWithKubeconfig) {
     const dbName = this.getDBName(appid)
 
     const cpu = await this.queryRange(
@@ -47,7 +47,7 @@ export class DedicatedDatabaseMonitorService {
     }
   }
 
-  async getConnection(appid: string, user: User) {
+  async getConnection(appid: string, user: UserWithKubeconfig) {
     const dbName = this.getDBName(appid)
     const query = `mongodb_connections{pod=~"${dbName}-mongo.+",state="current"}`
     const connections = await this.queryRange(
@@ -61,7 +61,7 @@ export class DedicatedDatabaseMonitorService {
       connections,
     }
   }
-  async getPerformance(appid: string, user: User) {
+  async getPerformance(appid: string, user: UserWithKubeconfig) {
     const dbName = this.getDBName(appid)
     const queries = {
       documentOperations: `rate(mongodb_mongod_metrics_document_total{pod=~"${dbName}-mongo.+"}[1m])`,
@@ -97,7 +97,7 @@ export class DedicatedDatabaseMonitorService {
   private async query(
     query: string,
     queryParams: Record<string, number | string | string[]>,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     const endpoint = ServerConfig.DATABASE_MONITOR_URL
     if (!endpoint) return []
@@ -108,7 +108,7 @@ export class DedicatedDatabaseMonitorService {
   private async queryRange(
     query: string,
     queryParams: Record<string, number | string | string[]>,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     const endpoint = ServerConfig.DATABASE_MONITOR_URL
     if (!endpoint) return []
@@ -139,7 +139,7 @@ export class DedicatedDatabaseMonitorService {
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number | string[]>,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     const labels = query.labels
     delete query['labels']

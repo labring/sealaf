@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Center, Spinner } from "@chakra-ui/react";
 import { useMutation } from "@tanstack/react-query";
 import { createSealosApp, sealosApp } from "@zjy365/sealos-desktop-sdk/app";
@@ -9,6 +9,7 @@ import { AuthenticationControllerSignin } from "@/apis/v1/auth";
 
 const AuthPage = () => {
   const { session, setSession, getKubeconfig, getNamespace } = useSessionStore();
+  const [isInit, setIsInit] = useState(false);
 
   useEffect(() => {
     return createSealosApp();
@@ -19,7 +20,7 @@ const AuthPage = () => {
       const result = await sealosApp.getSession();
       setSession(result);
     };
-    initApp();
+    initApp().finally(() => setIsInit(true));
   }, []);
 
   const { mutateAsync: signin } = useMutation(["signin"], () => {
@@ -31,6 +32,8 @@ const AuthPage = () => {
   });
 
   useEffect(() => {
+    if (!isInit) return;
+
     const localNamespace = localStorage.getItem("sealos-namespace");
     const localToken = localStorage.getItem("token");
     const namespace = getNamespace();
@@ -44,7 +47,7 @@ const AuthPage = () => {
     } else if (localToken && namespace && localNamespace === namespace) {
       window.location.href = "/dashboard";
     }
-  }, [session]);
+  }, [session, isInit]);
 
   return (
     <Center w="100vw" h="100vh">

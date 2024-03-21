@@ -26,8 +26,6 @@ export class LogController {
   private readonly logger = new Logger(LogController.name)
 
   constructor(
-    private readonly funcService: FunctionService,
-    private readonly regionService: RegionService,
     private readonly clusterService: ClusterService,
     private readonly podService: PodService,
   ) {}
@@ -47,7 +45,7 @@ export class LogController {
     }
 
     let podNameList: string[] = (
-      await this.podService.getPodNameListByAppid(appid)
+      await this.podService.getPodNameListByAppid(user, appid)
     ).podNameList
 
     if (!podNameList.includes(podName) && podName !== 'all') {

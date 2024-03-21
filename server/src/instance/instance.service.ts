@@ -57,9 +57,9 @@ export class InstanceService {
 
     const namespace = user.namespace
 
-    const appsV1Api = this.cluster.makeAppsV1Api(user)
-    const coreV1Api = this.cluster.makeCoreV1Api(user)
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
+    const appsV1Api = this.cluster.makeAppsV1Api()
+    const coreV1Api = this.cluster.makeCoreV1Api()
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api()
 
     // ensure deployment deleted
     if (deployment) {
@@ -104,7 +104,7 @@ export class InstanceService {
       app,
       deployment.spec.template.metadata.labels,
     )
-    const appsV1Api = this.cluster.makeAppsV1Api(user)
+    const appsV1Api = this.cluster.makeAppsV1Api()
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
       this.getAppDeployName(appid),
       user.namespace,
@@ -119,7 +119,7 @@ export class InstanceService {
     service.spec = this.makeServiceSpec(
       deployment.spec.template.metadata.labels,
     )
-    const coreV1Api = this.cluster.makeCoreV1Api(user)
+    const coreV1Api = this.cluster.makeCoreV1Api()
     const serviceResult = await coreV1Api.replaceNamespacedService(
       service.metadata.name,
       user.namespace,
@@ -147,7 +147,7 @@ export class InstanceService {
     data.metadata = { name, labels }
     data.spec = await this.makeDeploymentSpec(app, labels)
 
-    const appsV1Api = this.cluster.makeAppsV1Api(user)
+    const appsV1Api = this.cluster.makeAppsV1Api()
     const res = await appsV1Api.createNamespacedDeployment(namespace, data)
 
     this.logger.log(`create k8s deployment ${res.body?.metadata?.name}`)
@@ -162,7 +162,7 @@ export class InstanceService {
     const user = app.user
 
     const serviceName = this.getAppDeployName(app.appid)
-    const coreV1Api = this.cluster.makeCoreV1Api(user)
+    const coreV1Api = this.cluster.makeCoreV1Api()
     const spec = this.makeServiceSpec(labels)
     const res = await coreV1Api.createNamespacedService(user.namespace, {
       metadata: { name: serviceName, labels },
@@ -177,7 +177,7 @@ export class InstanceService {
     const user = app.user
     const name = this.getAppDeployName(appid)
 
-    const appsV1Api = this.cluster.makeAppsV1Api(user)
+    const appsV1Api = this.cluster.makeAppsV1Api()
     try {
       const res = await appsV1Api.readNamespacedDeployment(name, user.namespace)
       return res.body
@@ -192,7 +192,7 @@ export class InstanceService {
     const user = app.user
     assert(user, 'user is required')
 
-    const coreV1Api = this.cluster.makeCoreV1Api(user)
+    const coreV1Api = this.cluster.makeCoreV1Api()
     try {
       const serviceName = this.getAppDeployName(appid)
       const res = await coreV1Api.readNamespacedService(
@@ -431,7 +431,7 @@ export class InstanceService {
     const user = app.user
 
     const spec = this.makeHorizontalPodAutoscalerSpec(app)
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api()
     const res = await hpaV2Api.createNamespacedHorizontalPodAutoscaler(
       user.namespace,
       {
@@ -452,7 +452,7 @@ export class InstanceService {
     const appid = app.appid
     const user = app.user
 
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api()
 
     try {
       const hpaName = this.getAppDeployName(appid)
@@ -543,7 +543,7 @@ export class InstanceService {
     const appid = app.appid
     const user = app.user
 
-    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api(user)
+    const hpaV2Api = this.cluster.makeHorizontalPodAutoscalingV2Api()
 
     const hpa = oldHpa
 

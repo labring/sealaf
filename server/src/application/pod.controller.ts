@@ -12,6 +12,8 @@ import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
 import { ApiResponseObject, ResponseUtil } from 'src/utils/response'
 import { ContainerNameListDto, PodNameListDto } from './dto/pod.dto'
 import { PodService } from './pod.service'
+import { InjectUser } from 'src/utils/decorator'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 @ApiTags('Application')
 @ApiBearerAuth('Authorization')
@@ -30,9 +32,12 @@ export class PodController {
   @ApiOperation({ summary: 'Get app all pod name' })
   @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
   @Get()
-  async getPodNameList(@Param('appid') appid: string) {
+  async getPodNameList(
+    @Param('appid') appid: string,
+    @InjectUser() user: UserWithKubeconfig,
+  ) {
     const podNames: PodNameListDto =
-      await this.podService.getPodNameListByAppid(appid)
+      await this.podService.getPodNameListByAppid(user, appid)
     return ResponseUtil.ok(podNames)
   }
 
@@ -48,19 +53,20 @@ export class PodController {
   async getContainerNameList(
     @Param('appid') appid: string,
     @Query('podName') podName: string,
+    @InjectUser() user: UserWithKubeconfig,
   ) {
     if (!podName) {
       return ResponseUtil.error('no podName')
     }
     const podNames: PodNameListDto =
-      await this.podService.getPodNameListByAppid(appid)
+      await this.podService.getPodNameListByAppid(user, appid)
 
     if (!podNames.podNameList.includes(podName)) {
       return ResponseUtil.error('podName not exist')
     }
 
     const containerNames: ContainerNameListDto =
-      await this.podService.getContainerNameListByPodName(appid, podName)
+      await this.podService.getContainerNameListByPodName(user, podName)
     return ResponseUtil.ok(containerNames)
   }
 }

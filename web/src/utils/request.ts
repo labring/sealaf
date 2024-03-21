@@ -24,7 +24,7 @@ request.interceptors.request.use(
     let _headers: AxiosRequestHeaders | any = {
       Authorization: "Bearer " + localStorage.getItem("token"),
       "Content-Type": "application/json",
-      Credential: btoa(useSessionStore().getKubeconfig()),
+      Credential: btoa(useSessionStore.getState().getKubeconfig()),
     };
 
     config.headers = {

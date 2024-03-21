@@ -11,7 +11,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { ResponseUtil } from 'src/utils/response'
-import { User } from 'src/user/entities/user'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 @ApiTags('Database')
 @ApiBearerAuth('Authorization')
@@ -27,7 +27,7 @@ export class DedicatedDatabaseMonitorController {
   @Get('resource')
   async getResource(
     @InjectApplication() app: ApplicationWithRelations,
-    @InjectUser() user: User,
+    @InjectUser() user: UserWithKubeconfig,
   ) {
     const res = await this.monitor.getResource(app.appid, user)
     return ResponseUtil.ok(res)
@@ -39,7 +39,7 @@ export class DedicatedDatabaseMonitorController {
   @Get('connection')
   async getConnection(
     @InjectApplication() app: ApplicationWithRelations,
-    @InjectUser() user: User,
+    @InjectUser() user: UserWithKubeconfig,
   ) {
     const res = await this.monitor.getConnection(app.appid, user)
     return ResponseUtil.ok(res)
@@ -51,7 +51,7 @@ export class DedicatedDatabaseMonitorController {
   @Get('performance')
   async getPerformance(
     @InjectApplication() app: ApplicationWithRelations,
-    @InjectUser() user: User,
+    @InjectUser() user: UserWithKubeconfig,
   ) {
     const res = await this.monitor.getPerformance(app.appid, user)
     return ResponseUtil.ok(res)
