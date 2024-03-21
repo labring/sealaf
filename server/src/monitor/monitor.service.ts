@@ -1,8 +1,7 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { ServerConfig } from 'src/constants'
-import { ClusterService } from 'src/region/cluster/cluster.service'
-import { User } from 'src/user/entities/user'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 const requestConfig = {
   retryAttempts: 5,
@@ -17,19 +16,20 @@ export enum MonitorMetric {
 
 @Injectable()
 export class MonitorService {
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly clusterService: ClusterService,
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
   private readonly logger = new Logger(MonitorService.name)
 
-  async getData(appid: string, metrics: MonitorMetric[], isRange: boolean) {
+  async getData(
+    user: UserWithKubeconfig,
+    appid: string,
+    metrics: MonitorMetric[],
+    isRange: boolean,
+  ) {
     const endpoint = ServerConfig.APP_MONITOR_URL
     if (!endpoint) {
       this.logger.warn('Metrics not available for no endpoint')
       return {}
     }
-    const user = await this.clusterService.getUserByAppid(appid)
 
     const data = {}
     const res = metrics.map(async (metric) => {
@@ -46,7 +46,7 @@ export class MonitorService {
     endpoint: string,
     appid: string,
     type: string,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     const query = {
       type,
@@ -59,7 +59,7 @@ export class MonitorService {
     endpoint: string,
     appid: string,
     type: string,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     const range = 3600 // 1 hour
     const now = Math.floor(Date.now() / 1000)
@@ -86,7 +86,7 @@ export class MonitorService {
   private async queryInternal(
     endpoint: string,
     query: Record<string, string | number>,
-    user: User,
+    user: UserWithKubeconfig,
   ) {
     for (let attempt = 1; attempt <= requestConfig.retryAttempts; attempt++) {
       try {

@@ -12,11 +12,13 @@ export class User {
   namespace: string
 
   @ApiProperty()
-  kubeconfig: string
-
-  @ApiProperty()
   createdAt: Date
 
   @ApiProperty()
   updatedAt: Date
+}
+
+export class UserWithKubeconfig extends User {
+  @ApiProperty()
+  kubeconfig: string
 }

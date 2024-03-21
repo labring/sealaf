@@ -38,7 +38,7 @@ export class CertificateService {
 
   private async read(user: User, name: string) {
     try {
-      const api = this.clusterService.makeCustomObjectApi(user)
+      const api = this.clusterService.makeCustomObjectApi()
       const res = await api.getNamespacedCustomObject(
         'cert-manager.io',
         'v1',
@@ -62,7 +62,7 @@ export class CertificateService {
     domain: string,
     labels: Record<string, string>,
   ) {
-    const api = this.clusterService.makeObjectApi(user)
+    const api = this.clusterService.makeObjectApi()
     await api.create({
       apiVersion: 'cert-manager.io/v1',
       kind: 'Issuer',
@@ -116,7 +116,7 @@ export class CertificateService {
   }
 
   private async remove(user: User, name: string) {
-    const api = this.clusterService.makeObjectApi(user)
+    const api = this.clusterService.makeObjectApi()
 
     // Make a request to delete the Certificate resource
     const res = await api.delete({

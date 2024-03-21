@@ -11,7 +11,6 @@ export class UserService {
     const res = await this.db.collection<User>('User').insertOne({
       username: data.username,
       namespace: data.namespace,
-      kubeconfig: data.kubeconfig,
       createdAt: new Date(),
       updatedAt: new Date(),
     })

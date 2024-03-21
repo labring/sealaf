@@ -21,6 +21,7 @@ import { CreatePATDto } from './dto/create-pat.dto'
 import { PatService } from './pat.service'
 import { ObjectId } from 'mongodb'
 import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
+import { SealosManagerGuard } from 'src/authentication/sealos-manager.guard'
 
 @ApiTags('Authentication')
 @ApiBearerAuth('Authorization')
@@ -38,7 +39,7 @@ export class PatController {
    */
   @ApiOperation({ summary: 'Create a PAT' })
   @ApiResponse({ type: ResponseUtil })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard)
   @Post()
   async create(@Req() req: IRequest, @Body() dto: CreatePATDto) {
     const uid = req.user._id
@@ -75,7 +76,7 @@ export class PatController {
    */
   @ApiOperation({ summary: 'Delete a PAT' })
   @ApiResponse({ type: ResponseUtil })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard)
   @Delete(':id')
   async remove(@Req() req: IRequest, @Param('id') id: string) {
     const uid = req.user._id

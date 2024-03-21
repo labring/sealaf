@@ -1,3 +1,4 @@
+import { UserWithKubeconfig } from './../user/entities/user'
 import { AuthenticationService } from './authentication.service'
 import { Body, Controller, Post } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
@@ -7,7 +8,6 @@ import { Pat2TokenDto } from './dto/pat2token.dto'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { UserService } from 'src/user/user.service'
 import { SigninDto } from './dto/signin.dto'
-import { User } from 'src/user/entities/user'
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -22,10 +22,10 @@ export class AuthenticationController {
   @ApiResponse({ type: ResponseUtil })
   @Post('signin')
   async signin(@Body() dto: SigninDto) {
-    const user = new User()
-    user.kubeconfig = dto.kubeconfig
-    user.username = dto.username
+    const user = new UserWithKubeconfig()
     user.namespace = dto.namespace
+    user.username = dto.namespace
+    user.kubeconfig = dto.kubeconfig
 
     const api = this.clusterService.makeCoreV1Api(user)
     try {

@@ -20,7 +20,10 @@ export class UserController {
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiBearerAuth('Authorization')
   async getProfile(@Req() request: IRequest) {
-    const user = request.user
+    const user = {
+      username: request.user.username,
+      namespace: request.user.namespace,
+    }
     return ResponseUtil.ok(user)
   }
 }

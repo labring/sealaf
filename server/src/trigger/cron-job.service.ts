@@ -29,7 +29,7 @@ export class CronJobService {
 
     // create cronjob
     const ns = user.namespace
-    const batchApi = this.clusterService.makeBatchV1Api(user)
+    const batchApi = this.clusterService.makeBatchV1Api()
     const name = `sealaf-${appid}-cron-${trigger._id}`
     const command = await this.getTriggerCommand(user, trigger)
     const res = await batchApi.createNamespacedCronJob(ns, {
@@ -79,7 +79,7 @@ export class CronJobService {
     const user = await this.clusterService.getUserByAppid(appid)
     const ns = user.namespace
     try {
-      const batchApi = this.clusterService.makeBatchV1Api(user)
+      const batchApi = this.clusterService.makeBatchV1Api()
       const name = `sealaf-${appid}-cron-${trigger._id}`
       const res = await batchApi.readNamespacedCronJob(name, ns)
       return res.body
@@ -121,7 +121,7 @@ export class CronJobService {
     const appid = trigger.appid
     const user = await this.clusterService.getUserByAppid(appid)
     const ns = user.namespace
-    const batchApi = this.clusterService.makeBatchV1Api(user)
+    const batchApi = this.clusterService.makeBatchV1Api()
     const name = `sealaf-${appid}-cron-${trigger._id}`
     const res = await batchApi.deleteNamespacedCronJob(name, ns)
     return res.body
@@ -149,7 +149,7 @@ export class CronJobService {
     const user = await this.clusterService.getUserByAppid(appid)
 
     const ns = user.namespace
-    const batchApi = this.clusterService.makeBatchV1Api(user)
+    const batchApi = this.clusterService.makeBatchV1Api()
     const name = `sealaf-${appid}-cron-${trigger._id}`
     const body = [{ op: 'replace', path: '/spec/suspend', value: suspend }]
     try {

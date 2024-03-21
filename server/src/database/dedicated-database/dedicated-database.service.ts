@@ -56,7 +56,7 @@ export class DedicatedDatabaseService {
       ...spec,
       ...patch,
     })
-    const res = await this.cluster.applyYamlString(user, manifest)
+    const res = await this.cluster.applyYamlString(manifest, user.namespace)
     return res
   }
 
@@ -86,12 +86,12 @@ export class DedicatedDatabaseService {
 
   async deleteDeployManifest(region: Region, user: User, appid: string) {
     const manifest = await this.getDeployManifest(region, user, appid)
-    const res = await this.cluster.deleteCustomObject(user, manifest)
+    const res = await this.cluster.deleteCustomObject(manifest)
     return res
   }
 
   async getDeployManifest(region: Region, user: User, appid: string) {
-    const api = this.cluster.makeObjectApi(user)
+    const api = this.cluster.makeObjectApi()
     const emptyManifest = this.makeDeployManifest(region, appid)
     const specs = loadAllYaml(emptyManifest)
     assert(
@@ -159,7 +159,7 @@ export class DedicatedDatabaseService {
   }
 
   async getConnectionUri(user: User, database: DedicatedDatabase) {
-    const api = this.cluster.makeCoreV1Api(user)
+    const api = this.cluster.makeCoreV1Api()
     const namespace = user.namespace
     const name = getDedicatedDatabaseName(database.appid)
     const secretName = `${name}-conn-credential`

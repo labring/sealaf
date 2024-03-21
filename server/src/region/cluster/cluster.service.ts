@@ -3,7 +3,7 @@ import { KubernetesObject, V1Ingress } from '@kubernetes/client-node'
 import * as k8s from '@kubernetes/client-node'
 import { compare } from 'fast-json-patch'
 import { GroupVersionKind } from 'src/region/cluster/types'
-import { User } from 'src/user/entities/user'
+import { User, UserWithKubeconfig } from 'src/user/entities/user'
 import { SystemDatabase } from 'src/system-database'
 import { Application } from 'src/application/entities/application'
 import * as assert from 'node:assert'
@@ -25,21 +25,31 @@ export class ClusterService {
     return user
   }
 
-  loadKubeConfig(user: User) {
+  loadKubeConfig(user?: UserWithKubeconfig) {
     const conf = user.kubeconfig
     const kc = new k8s.KubeConfig()
+
+    if (!user) {
+      kc.loadFromDefault()
+      return kc
+    }
+
     kc.loadFromString(conf)
     if (kc.clusters.length > 0) {
       const cluster = {
         ...kc.clusters[0],
-        server: 'https://kubernetes.default.svc.cluster.local'
+        server: 'https://kubernetes.default.svc.cluster.local',
       }
       kc.clusters = [cluster]
     }
     return kc
   }
 
-  async applyYamlString(user: User, specString: string) {
+  async applyYamlString(
+    specString: string,
+    namespace: string,
+    user?: UserWithKubeconfig,
+  ) {
     const api = this.makeObjectApi(user)
     const specs: KubernetesObject[] = k8s.loadAllYaml(specString)
     const validSpecs = specs.filter((s) => s && s.kind && s.metadata)
@@ -54,7 +64,7 @@ export class ClusterService {
       spec.metadata.annotations[
         'kubectl.kubernetes.io/last-applied-configuration'
       ] = JSON.stringify(spec)
-      spec.metadata.namespace = user.namespace
+      spec.metadata.namespace = namespace
 
       try {
         // try to get the resource, if it does not exist an error will be thrown and we will end up in the catch
@@ -88,14 +98,18 @@ export class ClusterService {
     return created
   }
 
-  async deleteYamlString(user: User, specString: string) {
+  async deleteYamlString(
+    specString: string,
+    namespace: string,
+    user?: UserWithKubeconfig,
+  ) {
     const api = this.makeObjectApi(user)
     const specs: k8s.KubernetesObject[] = k8s.loadAllYaml(specString)
     const validSpecs = specs.filter((s) => s && s.kind && s.metadata)
     const deleted: k8s.KubernetesObject[] = []
 
     for (const spec of validSpecs) {
-      spec.metadata.namespace = user.namespace
+      spec.metadata.namespace = namespace
       try {
         // try to get the resource, if it does not exist an error will be thrown and we will end up in the catch
         // block.
@@ -110,7 +124,7 @@ export class ClusterService {
     return deleted
   }
 
-  async patchCustomObject(user: User, spec: KubernetesObject) {
+  async patchCustomObject(spec: KubernetesObject, user?: UserWithKubeconfig) {
     const client = this.makeCustomObjectApi(user)
     const gvk = GroupVersionKind.fromKubernetesObject(spec)
 
@@ -149,7 +163,7 @@ export class ClusterService {
     return response.body
   }
 
-  async deleteCustomObject(user: User, spec: KubernetesObject) {
+  async deleteCustomObject(spec: KubernetesObject, user?: UserWithKubeconfig) {
     const client = this.makeCustomObjectApi(user)
     const gvk = GroupVersionKind.fromKubernetesObject(spec)
 
@@ -165,7 +179,7 @@ export class ClusterService {
   }
 
   async getIngress(user: User, name: string) {
-    const api = this.makeNetworkingApi(user)
+    const api = this.makeNetworkingApi()
     const namespace = user.namespace
 
     try {
@@ -186,20 +200,20 @@ export class ClusterService {
   async createIngress(user: User, body: V1Ingress) {
     body.apiVersion = 'networking.k8s.io/v1'
     body.kind = 'Ingress'
-    const api = this.makeNetworkingApi(user)
+    const api = this.makeNetworkingApi()
     const res = await api.createNamespacedIngress(body.metadata.namespace, body)
     return res.body
   }
 
   async deleteIngress(user: User, name: string) {
-    const api = this.makeNetworkingApi(user)
+    const api = this.makeNetworkingApi()
     const namespace = user.namespace
     const res = await api.deleteNamespacedIngress(name, namespace)
     return res.body
   }
 
   async createStorageUser(user: User) {
-    const api = this.makeCustomObjectApi(user)
+    const api = this.makeCustomObjectApi()
     const name = user.namespace.replace('ns-', '')
     const res = await api.createNamespacedCustomObject(
       'objectstorage.sealos.io',
@@ -219,7 +233,7 @@ export class ClusterService {
   }
 
   async getStorageConf(user: User) {
-    const api = this.makeCustomObjectApi(user)
+    const api = this.makeCustomObjectApi()
     const name = user.namespace.replace('ns-', '')
 
     let status
@@ -234,7 +248,7 @@ export class ClusterService {
       status = (res.body as any)?.status
     } catch {
       await this.createStorageUser(user)
-      const watch = new k8s.Watch(this.loadKubeConfig(user))
+      const watch = new k8s.Watch(this.loadKubeConfig())
       const wait = (timeout: number) =>
         new Promise((resolve, reject) => {
           watch
@@ -272,7 +286,7 @@ export class ClusterService {
   }
 
   async getStorageBucket(user: User, name: string) {
-    const api = this.makeCustomObjectApi(user)
+    const api = this.makeCustomObjectApi()
     const res = await api.getNamespacedCustomObject(
       'objectstorage.sealos.io',
       'v1',
@@ -296,7 +310,7 @@ export class ClusterService {
     name: string,
     policy: 'public' | 'readonly' | 'private',
   ) {
-    const api = this.makeCustomObjectApi(user)
+    const api = this.makeCustomObjectApi()
     await api.createNamespacedCustomObject(
       'objectstorage.sealos.io',
       'v1',
@@ -315,7 +329,7 @@ export class ClusterService {
       },
     )
 
-    const watch = new k8s.Watch(this.loadKubeConfig(user))
+    const watch = new k8s.Watch(this.loadKubeConfig())
     const wait = (timeout: number) =>
       new Promise((resolve, reject) => {
         watch
@@ -346,7 +360,7 @@ export class ClusterService {
   }
 
   async deleteStorageBucket(user: User, name: string) {
-    const api = this.makeCustomObjectApi(user)
+    const api = this.makeCustomObjectApi()
     const res = await api.deleteNamespacedCustomObject(
       'objectstorage.sealos.io',
       'v1',
@@ -357,38 +371,43 @@ export class ClusterService {
     return res.body
   }
 
-  makeCoreV1Api(user: User) {
+  makeCoreV1Api(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.CoreV1Api)
   }
 
-  makeAppsV1Api(user: User) {
+  makeAppsV1Api(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.AppsV1Api)
   }
 
-  makeBatchV1Api(user: User) {
+  makeBatchV1Api(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.BatchV1Api)
   }
 
-  makeObjectApi(user: User) {
+  makeObjectApi(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.KubernetesObjectApi)
   }
 
-  makeCustomObjectApi(user: User) {
+  makeCustomObjectApi(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.CustomObjectsApi)
   }
 
-  makeHorizontalPodAutoscalingV2Api(user: User) {
+  makeHorizontalPodAutoscalingV2Api(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.AutoscalingV2Api)
   }
 
-  makeNetworkingApi(user: User) {
+  makeNetworkingApi(user?: UserWithKubeconfig) {
     const kc = this.loadKubeConfig(user)
     return kc.makeApiClient(k8s.NetworkingV1Api)
+  }
+
+  makeRbacAuthorizationApi(user?: UserWithKubeconfig) {
+    const kc = this.loadKubeConfig(user)
+    return kc.makeApiClient(k8s.RbacAuthorizationV1Api)
   }
 }

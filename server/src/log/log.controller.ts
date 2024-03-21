@@ -18,7 +18,7 @@ import { ClusterService } from 'src/region/cluster/cluster.service'
 import { Observable } from 'rxjs'
 import { PodService } from 'src/application/pod.service'
 import { InjectUser } from 'src/utils/decorator'
-import { User } from 'src/user/entities/user'
+import { UserWithKubeconfig } from 'src/user/entities/user'
 
 @ApiBearerAuth('Authorization')
 @Controller('apps/:appid/logs')
@@ -40,7 +40,7 @@ export class LogController {
     @Param('podName') podName: string,
     @Query('containerName') containerName: string,
     @Param('appid') appid: string,
-    @InjectUser('user') user: User,
+    @InjectUser('user') user: UserWithKubeconfig,
   ) {
     if (!containerName) {
       containerName = appid

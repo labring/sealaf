@@ -51,6 +51,7 @@ import { isEqual } from 'lodash'
 import { InstanceService } from 'src/instance/instance.service'
 import { BindCustomDomainDto } from './dto/bind-custom-domain.dto'
 import { ClusterService } from 'src/region/cluster/cluster.service'
+import { SealosManagerGuard } from 'src/authentication/sealos-manager.guard'
 
 @ApiTags('Application')
 @Controller('applications')
@@ -71,7 +72,7 @@ export class ApplicationController {
   /**
    * Create application
    */
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard)
   @ApiOperation({ summary: 'Create application' })
   @ApiResponseObject(ApplicationWithRelations)
   @Post()
@@ -188,7 +189,7 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Update application name' })
   @ApiResponseObject(Application)
-  @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard, ApplicationAuthGuard)
   @Patch(':appid/name')
   async updateName(
     @Param('appid') appid: string,
@@ -203,7 +204,7 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Update application state' })
   @ApiResponseObject(Application)
-  @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard, ApplicationAuthGuard)
   @Patch(':appid/state')
   async updateState(
     @Param('appid') appid: string,
@@ -256,7 +257,7 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Update application bundle' })
   @ApiResponseObject(ApplicationBundle)
-  @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard, ApplicationAuthGuard)
   @Patch(':appid/bundle')
   async updateBundle(
     @Param('appid') appid: string,
@@ -416,7 +417,7 @@ export class ApplicationController {
    */
   @ApiResponseObject(RuntimeDomain)
   @ApiOperation({ summary: 'Remove custom domain of application' })
-  @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard, ApplicationAuthGuard)
   @Delete(':appid/domain')
   async remove(@Param('appid') appid: string) {
     const runtimeDomain = await this.runtimeDomain.findOne(appid)
@@ -437,7 +438,7 @@ export class ApplicationController {
    */
   @ApiOperation({ summary: 'Delete an application' })
   @ApiResponseObject(Application)
-  @UseGuards(JwtAuthGuard, ApplicationAuthGuard)
+  @UseGuards(JwtAuthGuard, SealosManagerGuard, ApplicationAuthGuard)
   @Delete(':appid')
   async delete(
     @Param('appid') appid: string,

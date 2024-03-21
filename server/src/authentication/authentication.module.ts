@@ -8,6 +8,7 @@ import { HttpModule } from '@nestjs/axios'
 import { PatService } from 'src/user/pat.service'
 import { AuthenticationService } from './authentication.service'
 import { AuthenticationController } from './authentication.controller'
+import { SealosManagerGuard } from './sealos-manager.guard'
 
 @Global()
 @Module({
@@ -20,7 +21,12 @@ import { AuthenticationController } from './authentication.controller'
     UserModule,
     HttpModule,
   ],
-  providers: [JwtStrategy, PatService, AuthenticationService],
+  providers: [
+    JwtStrategy,
+    PatService,
+    AuthenticationService,
+    SealosManagerGuard,
+  ],
   controllers: [AuthenticationController],
 })
 export class AuthenticationModule {}
