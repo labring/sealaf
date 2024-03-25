@@ -72,9 +72,9 @@ export class DedicatedDatabaseTaskService {
       await this.dbService.applyDeployManifest(region, user, appid)
     }
 
-    // if waiting time is more than 5 minutes, stop
+    // if waiting time is more than 10 minutes, stop
     const waitingTime = Date.now() - data.updatedAt.getTime()
-    if (waitingTime > 1000 * 60 * 5) {
+    if (waitingTime > 1000 * 60 * 10) {
       await this.db
         .collection<DedicatedDatabase>('DedicatedDatabase')
         .updateOne(
