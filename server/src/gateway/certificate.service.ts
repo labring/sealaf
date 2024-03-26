@@ -63,55 +63,78 @@ export class CertificateService {
     labels: Record<string, string>,
   ) {
     const api = this.clusterService.makeObjectApi()
-    await api.create({
-      apiVersion: 'cert-manager.io/v1',
-      kind: 'Issuer',
-      // Set the metadata for the Certificate resource
-      metadata: {
-        name,
-        namespace: user.namespace,
-        labels,
-      },
-      // Define the specification for the Certificate resource
-      spec: {
-        acme: {
-          server: 'https://acme-v02.api.letsencrypt.org/directory',
-          email: 'admin@sealos.io',
-          privateKeySecretRef: {
-            name: 'letsencrypt-prod',
-          },
-          solvers: [
-            {
-              http01: {
-                ingress: {
-                  class: 'nginx',
-                  serviceType: 'ClusterIP',
+    await api
+      .create({
+        apiVersion: 'cert-manager.io/v1',
+        kind: 'Issuer',
+        // Set the metadata for the Certificate resource
+        metadata: {
+          name,
+          namespace: user.namespace,
+          labels,
+        },
+        // Define the specification for the Certificate resource
+        spec: {
+          acme: {
+            server: 'https://acme-v02.api.letsencrypt.org/directory',
+            email: 'admin@sealos.io',
+            privateKeySecretRef: {
+              name: 'letsencrypt-prod',
+            },
+            solvers: [
+              {
+                http01: {
+                  ingress: {
+                    class: 'nginx',
+                    serviceType: 'ClusterIP',
+                  },
                 },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    })
-    const res = await api.create({
-      apiVersion: 'cert-manager.io/v1',
-      kind: 'Certificate',
-      // Set the metadata for the Certificate resource
-      metadata: {
-        name,
-        namespace: user.namespace,
-        labels,
-      },
-      // Define the specification for the Certificate resource
-      spec: {
-        secretName: name,
-        dnsNames: [domain],
-        issuerRef: {
+      })
+      .catch((err) => {
+        if (
+          err.response &&
+          JSON.stringify(err.response).includes('already exists')
+        ) {
+          this.logger.warn(`certificate issuer ${name} already exists`)
+          return
+        }
+        throw err
+      })
+
+    const res = await api
+      .create({
+        apiVersion: 'cert-manager.io/v1',
+        kind: 'Certificate',
+        // Set the metadata for the Certificate resource
+        metadata: {
           name,
-          kind: 'Issuer',
+          namespace: user.namespace,
+          labels,
         },
-      },
-    })
+        // Define the specification for the Certificate resource
+        spec: {
+          secretName: name,
+          dnsNames: [domain],
+          issuerRef: {
+            name,
+            kind: 'Issuer',
+          },
+        },
+      })
+      .catch((err) => {
+        if (
+          err.response &&
+          JSON.stringify(err.response).includes('already exists')
+        ) {
+          this.logger.warn(`certificate ${name} already exists`)
+          return { body: null }
+        }
+        throw err
+      })
     return res.body
   }
 
