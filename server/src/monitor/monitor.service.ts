@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
+import { PodService } from 'src/application/pod.service'
 import { ServerConfig } from 'src/constants'
 import { UserWithKubeconfig } from 'src/user/entities/user'
 
@@ -16,7 +17,10 @@ export enum MonitorMetric {
 
 @Injectable()
 export class MonitorService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly podService: PodService,
+  ) {}
   private readonly logger = new Logger(MonitorService.name)
 
   async getData(
@@ -48,9 +52,14 @@ export class MonitorService {
     type: string,
     user: UserWithKubeconfig,
   ) {
+    const podNames = await this.podService.getPodNameListByAppid(user, appid)
+    if (!podNames.podNameList.length) {
+      return []
+    }
+    const podName = podNames.podNameList[0]
     const query = {
       type,
-      launchPadName: `sealaf-${appid}`,
+      launchPadName: podName,
     }
     return await this.queryInternal(endpoint, query, user)
   }
