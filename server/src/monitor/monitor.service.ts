@@ -70,6 +70,12 @@ export class MonitorService {
     type: string,
     user: UserWithKubeconfig,
   ) {
+    const podNames = await this.podService.getPodNameListByAppid(user, appid)
+    if (!podNames.podNameList.length) {
+      return []
+    }
+    const podName = podNames.podNameList[0]
+
     const range = 3600 // 1 hour
     const now = Math.floor(Date.now() / 1000)
     const start = now - range
@@ -85,7 +91,7 @@ export class MonitorService {
       endpoint,
       {
         type,
-        launchPadName: `sealaf-${appid}`,
+        launchPadName: podName,
         ...queryParams,
       },
       user,
