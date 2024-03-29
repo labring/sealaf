@@ -16,7 +16,6 @@ export default defineConfig(({ command, mode }) => {
       proxy: {
         "/v1": {
           target: env.VITE_DEV_SERVER_URL,
-          secure: false,
           changeOrigin: true,
         },
       },
@@ -33,6 +32,7 @@ export default defineConfig(({ command, mode }) => {
         workbox: {
           globPatterns: ["**/*.{js,css,html,png,svg,json}"],
           navigateFallbackDenylist: [/^\/v1/],
+          maximumFileSizeToCacheInBytes: 10000000,
         },
         manifest: {
           name: "laf",
