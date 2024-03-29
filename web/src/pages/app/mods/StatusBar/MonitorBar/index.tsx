@@ -5,7 +5,7 @@ import { useQueries } from "@tanstack/react-query";
 import clsx from "clsx";
 
 import { MonitorIcon } from "@/components/CommonIcon";
-import { uniformCapacity, uniformCPU, uniformMemory } from "@/utils/format";
+import { uniformCapacity } from "@/utils/format";
 
 import { TInstantMonitorData } from "@/apis/typing";
 import { DedicatedDatabaseMonitorControllerGetResource } from "@/apis/v1/apps";
@@ -18,7 +18,7 @@ export const MonitorDataType = ["cpu", "memory"];
 export default function MonitorBar() {
   const { currentApp } = useGlobalStore();
   const { t } = useTranslation();
-  const { limitCPU, limitMemory, dedicatedDatabase } = currentApp.bundle.resource;
+  const { dedicatedDatabase } = currentApp.bundle.resource;
   let databaseCapacity = dedicatedDatabase.capacity;
 
   const [resources, setResources] = useState<any>([]);
@@ -52,13 +52,11 @@ export default function MonitorBar() {
   useEffect(() => {
     if (allDataLoaded) {
       const { cpu, memory } = instantMonitorData || {};
-      const databaseUsage = resourceData.dataSize.find(
-        (item: any) => item.metric.database === appid,
-      );
+      const database = resourceData.dataSize;
       const data = {
         cpu,
         memory,
-        database: databaseUsage ? [databaseUsage] : [],
+        database,
       };
       setInstantData(data);
     }
@@ -78,12 +76,12 @@ export default function MonitorBar() {
     setResources([
       {
         label: `CPU`,
-        percent: (uniformCPU(getAverage(instantData.cpu)) / limitCPU) * 100,
+        percent: getAverage(instantData.cpu) * 100,
         color: "#47C8BF",
       },
       {
         label: t("Spec.RAM"),
-        percent: (uniformMemory(getAverage(instantData.memory)) / limitMemory) * 100,
+        percent: getAverage(instantData.memory) * 100,
         color: "#8172D8",
       },
       {
@@ -116,7 +114,7 @@ export default function MonitorBar() {
           <MonitorIcon className="mr-1" />
           {t("SettingPanel.MonitorSetting") + " :"}
         </span>
-        <Center className="w-52 space-x-2">
+        <Center className="w-40 space-x-2">
           {resources.length !== 0 ? (
             resources.map((resource: any, index: number) => (
               <Tooltip key={index} label={`${resource.label}: ${resource.percent.toFixed(2)}%`}>

@@ -92,6 +92,8 @@ export default function AreaCard(props: {
   maxValue: number;
   unit: string;
   className?: string;
+  longestTick: string;
+  onLongestTickChange: (val: string) => void;
 }) {
   const {
     data,
@@ -104,6 +106,8 @@ export default function AreaCard(props: {
     maxValue,
     unit,
     className,
+    longestTick,
+    onLongestTickChange,
   } = props;
   const [chartData, setChartData] = useState<any[]>([]);
   useEffect(() => {
@@ -112,17 +116,10 @@ export default function AreaCard(props: {
       data?.forEach((item, index) => {
         if (item.values) {
           const tempData = item.values.map((item) => {
-            if (title === "CPU") {
-              return {
-                xData: modifyTimestamp(item[0]),
-                [`value${index}`]: Number(item[1]),
-              };
-            } else {
-              return {
-                xData: modifyTimestamp(item[0]),
-                [`value${index}`]: Number(item[1]) / 1024 / 1024,
-              };
-            }
+            return {
+              xData: modifyTimestamp(item[0]),
+              [`value${index}`]: Number((Number(item[1]) * maxValue).toFixed(2)),
+            };
           });
           tempDataArray.push(tempData);
         }
@@ -132,20 +129,21 @@ export default function AreaCard(props: {
     if (!data[dataNumber - 1]?.values) return;
     setChartData(
       data[dataNumber - 1]?.values.map((item) => {
-        if (title === "CPU") {
-          return {
-            xData: item[0] * 1000,
-            value0: Number(item[1]),
-          };
-        } else {
-          return {
-            xData: item[0] * 1000,
-            value0: Number(item[1]) / 1024 / 1024,
-          };
-        }
+        return {
+          xData: item[0] * 1000,
+          value0: Number((Number(item[1]) * maxValue).toFixed(2)),
+        };
       }),
     );
-  }, [data, dataNumber, title]);
+  }, [data, dataNumber, title, maxValue]);
+
+  const tickFormatter = (val: string) => {
+    const formattedTick = val.toString();
+    if (longestTick.length < formattedTick.length) {
+      onLongestTickChange(formattedTick);
+    }
+    return val;
+  };
 
   return (
     <div className={className}>
@@ -178,7 +176,7 @@ export default function AreaCard(props: {
         )}
       </div>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={chartData} margin={{ left: -28, top: 6 }} syncId="sync">
+        <AreaChart data={chartData} margin={{ top: 6 }} syncId="sync">
           <CartesianGrid stroke="#f5f5f5" vertical={false} />
           <XAxis
             dataKey="xData"
@@ -190,7 +188,12 @@ export default function AreaCard(props: {
             domain={[Date.now() - 60 * 60 * 1000, Date.now()]}
             stroke="#C0C2D2"
           />
-          <YAxis fontSize="10" stroke="#9CA2A8" />
+          <YAxis
+            fontSize="10"
+            stroke="#9CA2A8"
+            width={longestTick.length * 8 + 8}
+            tickFormatter={tickFormatter}
+          />
           <ReferenceLine
             y={maxValue}
             strokeDasharray="3 3"
