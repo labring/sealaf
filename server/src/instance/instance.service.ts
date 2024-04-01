@@ -282,6 +282,10 @@ export class InstanceService {
         name: 'RESTART_AT',
         value: new Date().getTime().toString(),
       },
+      {
+        name: 'IS_SEALAF',
+        value: 'true',
+      },
     ]
 
     // merge env from app configuration, override if exists
