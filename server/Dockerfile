@@ -5,6 +5,11 @@ RUN apt-get install -y openssl wget libkrb5-dev
 
 ARG TARGETARCH
 
+RUN export MONGO_TOOLS=mongodb-database-tools-ubuntu1804-$( [ "$TARGETARCH" = "amd64" ] && echo "x86_64" || echo "arm64" )-100.8.0 && \
+  wget https://fastdl.mongodb.org/tools/db/${MONGO_TOOLS}.tgz && \
+  tar -zxvf ${MONGO_TOOLS}.tgz -C /usr/local/ --strip-components=1 ${MONGO_TOOLS}/bin/ && \
+  rm -rf ${MONGO_TOOLS}.tgz $MONGO_TOOLS
+
 WORKDIR /app
 
 EXPOSE 3000

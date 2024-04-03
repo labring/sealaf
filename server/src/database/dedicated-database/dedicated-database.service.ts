@@ -266,7 +266,7 @@ export class DedicatedDatabaseService {
     if (!dedicatedDatabase) {
       throw new Error(`database ${appid} not found`)
     }
-    const connectionUri = this.getConnectionUri(user, dedicatedDatabase)
+    const connectionUri = await this.getConnectionUri(user, dedicatedDatabase)
     assert(connectionUri, `database ${appid} connection uri not found`)
 
     let syncId: ObjectId
@@ -309,7 +309,7 @@ export class DedicatedDatabaseService {
     if (!dedicatedDatabase) {
       throw new Error(`database ${appid} not found`)
     }
-    const connectionUri = this.getConnectionUri(user, dedicatedDatabase)
+    const connectionUri = await this.getConnectionUri(user, dedicatedDatabase)
     assert(connectionUri, `database ${appid} connection uri not found`)
 
     let syncId: ObjectId
