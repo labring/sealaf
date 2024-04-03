@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner, Tooltip } from "@chakra-ui/react";
 
@@ -29,7 +29,7 @@ export default function LSPBar() {
     }
   }, [commonSettings.useLSP, lspWebSocket]);
 
-  const handleWebSocketClick = () => {
+  const handleWebSocketClick = useCallback(() => {
     const newLspWebSocket = createWebSocketAndStartClient(url, currentApp.develop_token);
     setLspWebSocket(newLspWebSocket);
     setLSPStatus("initializing");
@@ -77,7 +77,26 @@ export default function LSPBar() {
       newLspWebSocket.close();
       setLSPStatus("closed");
     };
-  };
+  }, [url, currentApp.develop_token, lspWebSocket]);
+
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const listener = () => {
+      setVisible(document.visibilityState === "visible");
+    };
+    window.addEventListener("visibilitychange", listener);
+
+    return () => {
+      window.removeEventListener("visibilitychange", listener);
+    };
+  }, [LSPStatus, handleWebSocketClick, commonSettings.useLSP]);
+
+  useEffect(() => {
+    if (visible && commonSettings.useLSP && LSPStatus === "closed") {
+      handleWebSocketClick();
+    }
+  }, [LSPStatus, handleWebSocketClick, commonSettings.useLSP, visible]);
 
   return (
     <>
