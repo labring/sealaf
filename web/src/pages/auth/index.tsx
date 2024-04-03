@@ -38,7 +38,7 @@ const AuthPage = () => {
     const localToken = localStorage.getItem("token");
     const namespace = getNamespace();
 
-    if (session.user && namespace && localNamespace !== namespace) {
+    if (session.user && namespace && (localNamespace !== namespace || !localToken)) {
       signin().then((res) => {
         localStorage.setItem("token", res?.data.token);
         localStorage.setItem("sealos-namespace", namespace);

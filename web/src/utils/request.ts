@@ -64,6 +64,7 @@ request.interceptors.response.use(
       const { data } = error.response;
       if (data.statusCode === 401) {
         localStorage.removeItem("token");
+        localStorage.removeItem("sealos-namespace");
         // eslint-disable-next-line no-restricted-globals
         (window as any).location.href = (VITE_SERVER_BASE_URL + "/") as string;
         return data;
