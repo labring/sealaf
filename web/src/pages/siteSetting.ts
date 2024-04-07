@@ -9,6 +9,7 @@ type SITE_KEY =
   | "site_footer"
   | "site_url"
   | "ai_pilot_url"
+  | "ai_complete_url"
   | "laf_forum_url"
   | "laf_business_url"
   | "laf_discord_url"
