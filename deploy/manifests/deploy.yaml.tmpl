@@ -36,7 +36,7 @@ spec:
             requests:
               cpu: 20m
               memory: 25Mi
-          image: docker.io/zacharywin/sealaf-web:0.0.16
+          image: docker.io/zacharywin/sealaf-web:sha-35487e0
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -96,7 +96,7 @@ spec:
             requests:
               cpu: 100m
               memory: 204Mi
-          image: docker.io/zacharywin/sealaf-server:0.0.28
+          image: docker.io/zacharywin/sealaf-server:sha-35487e0
           imagePullPolicy: IfNotPresent
           env:
             - name: DATABASE_URL
@@ -129,6 +129,10 @@ spec:
               value: "true"
             - name: DEFAULT_REGION_TLS_WILDCARD_CERTIFICATE_SECRET_NAME
               value: "{{ .certSecretName }}"
+            - name: DEFAULT_RUNTIME_INIT_IMAGE
+              value: "{{ .runtimeInitImage }}"
+            - name: DEFAULT_RUNTIME_IMAGE
+              value: "{{ .runtimeImage }}"
           livenessProbe:
             httpGet:
               path: /v1/regions
