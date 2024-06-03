@@ -6,6 +6,15 @@ import { PodNameListDto, ContainerNameListDto } from './dto/pod.dto'
 import { LABEL_KEY_APP_ID } from 'src/constants'
 import { UserWithKubeconfig } from 'src/user/entities/user'
 
+export type PodStatus = {
+  appid: string
+  podStatus: {
+    name: string
+    podStatus: string
+    initContainerId?: string
+  }[]
+}
+
 @Injectable()
 export class PodService {
   private readonly logger = new Logger(PodService.name)
@@ -47,5 +56,33 @@ export class PodService {
     }
 
     return containerNames
+  }
+
+  async getPodStatusListByAppid(
+    user: UserWithKubeconfig,
+    appid: string,
+  ): Promise<PodStatus> {
+    const coreV1Api = this.cluster.makeCoreV1Api(user)
+    const res: { response: http.IncomingMessage; body: V1PodList } =
+      await coreV1Api.listNamespacedPod(
+        user.namespace,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        `${LABEL_KEY_APP_ID}=${appid}`,
+      )
+    const podStatus: PodStatus = {
+      appid: appid,
+      podStatus: [],
+    }
+    for (const item of res.body.items) {
+      podStatus.podStatus.push({
+        name: item.metadata.name,
+        podStatus: item.status.phase,
+        initContainerId: item.status.initContainerStatuses[0]?.containerID,
+      })
+    }
+    return podStatus
   }
 }

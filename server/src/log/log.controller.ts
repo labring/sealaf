@@ -5,15 +5,14 @@ import {
   Query,
   UseGuards,
   Sse,
+  MessageEvent,
 } from '@nestjs/common'
 import http from 'http'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { FunctionService } from '../function/function.service'
 import { JwtAuthGuard } from 'src/authentication/jwt.auth.guard'
 import { ApplicationAuthGuard } from 'src/authentication/application.auth.guard'
 import { PassThrough } from 'nodemailer/lib/xoauth2'
 import { Log } from '@kubernetes/client-node'
-import { RegionService } from 'src/region/region.service'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { Observable } from 'rxjs'
 import { PodService } from 'src/application/pod.service'
@@ -44,23 +43,36 @@ export class LogController {
       containerName = appid
     }
 
-    let podNameList: string[] = (
-      await this.podService.getPodNameListByAppid(user, appid)
-    ).podNameList
+    const podStatus = await this.podService.getPodStatusListByAppid(user, appid)
 
-    if (!podNameList.includes(podName) && podName !== 'all') {
+    if (!podStatus.podStatus[0]) {
       return new Observable<MessageEvent>((subscriber) => {
-        subscriber.next(
-          JSON.stringify({
-            error: 'podName not exist',
-          }) as unknown as MessageEvent,
-        )
-        subscriber.complete()
+        subscriber.error(new Error('pod not exist'))
       })
     }
 
+    const podNameList = podStatus.podStatus.map((pod) => pod.name)
+
+    const initContainerId = podStatus.podStatus.map(
+      (pod) => pod.initContainerId,
+    )
+
+    if (containerName === 'init') {
+      for (const containerId of initContainerId) {
+        if (!containerId) {
+          return new Observable<MessageEvent>((subscriber) => {
+            subscriber.error(new Error('init container not exist'))
+          })
+        }
+      }
+    }
+
     if (podName !== 'all') {
-      podNameList = undefined
+      if (!podNameList.includes(podName)) {
+        return new Observable<MessageEvent>((subscriber) => {
+          subscriber.error(new Error('podName not exist'))
+        })
+      }
     }
 
     const kc = this.clusterService.loadKubeConfig(user)
@@ -70,14 +82,34 @@ export class LogController {
       const logs = new Log(kc)
 
       const streamsEnded = new Set<string>()
+      const k8sLogResponses: http.IncomingMessage[] = []
+      const podLogStreams: PassThrough[] = []
 
       const destroyStream = () => {
-        combinedLogStream?.removeAllListeners()
-        combinedLogStream?.destroy()
+        combinedLogStream.removeAllListeners()
+        combinedLogStream.destroy()
+
+        k8sLogResponses.forEach((response) => {
+          response.removeAllListeners()
+          response.destroy()
+        })
+
+        podLogStreams.forEach((stream) => {
+          stream.removeAllListeners()
+          stream.destroy()
+        })
       }
 
+      let idCounter = 1
       combinedLogStream.on('data', (chunk) => {
-        subscriber.next(chunk.toString() as MessageEvent)
+        const dataString = chunk.toString()
+        const messageEvent: MessageEvent = {
+          id: idCounter.toString(),
+          data: dataString,
+          type: 'log',
+        }
+        idCounter++
+        subscriber.next(messageEvent)
       })
 
       combinedLogStream.on('error', (error) => {
@@ -86,18 +118,18 @@ export class LogController {
         destroyStream()
       })
 
-      combinedLogStream.on('end', () => {
+      combinedLogStream.on('close', () => {
         subscriber.complete()
         destroyStream()
       })
 
       const fetchLog = async (podName: string) => {
-        let k8sResponse: http.IncomingMessage | undefined
         const podLogStream = new PassThrough()
         streamsEnded.add(podName)
+        podLogStreams.push(podLogStream)
 
         try {
-          k8sResponse = await logs.log(
+          const k8sResponse: http.IncomingMessage = await logs.log(
             user.namespace,
             podName,
             containerName,
@@ -110,39 +142,49 @@ export class LogController {
               tailLines: 1000,
             },
           )
+
+          k8sLogResponses.push(k8sResponse)
+
           podLogStream.pipe(combinedLogStream, { end: false })
 
           podLogStream.on('error', (error) => {
-            combinedLogStream.emit('error', error)
-            podLogStream.removeAllListeners()
-            podLogStream.destroy()
+            subscriber.error(error)
+            this.logger.error(`podLogStream error for pod ${podName}`, error)
+            destroyStream()
           })
 
-          podLogStream.once('end', () => {
+          k8sResponse.on('close', () => {
             streamsEnded.delete(podName)
             if (streamsEnded.size === 0) {
-              combinedLogStream.end()
+              combinedLogStream.emit('close')
+            }
+          })
+
+          podLogStream.on('close', () => {
+            streamsEnded.delete(podName)
+            if (streamsEnded.size === 0) {
+              combinedLogStream.emit('close')
             }
           })
         } catch (error) {
-          this.logger.error(`Failed to get logs for pod ${podName}`, error)
           subscriber.error(error)
-          k8sResponse?.destroy()
-          podLogStream.removeAllListeners()
-          podLogStream.destroy()
+          this.logger.error(`Failed to get logs for pod ${podName}`, error)
           destroyStream()
         }
       }
 
-      if (podNameList && podNameList.length > 0) {
+      if (podName === 'all' && podNameList.length > 0) {
         podNameList.forEach((podName) => {
           fetchLog(podName)
         })
       } else {
         fetchLog(podName)
       }
+
       // Clean up when the client disconnects
-      return () => destroyStream()
+      return () => {
+        destroyStream()
+      }
     })
   }
 }

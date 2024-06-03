@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Button,
@@ -15,61 +15,66 @@ import {
   useColorMode,
   useDisclosure,
 } from "@chakra-ui/react";
+import { EventStreamContentType, fetchEventSource } from "@microsoft/fetch-event-source";
 import { LogViewer, LogViewerSearch } from "@patternfly/react-log-viewer";
 import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { debounce } from "lodash";
 
 import { DownIcon, RefreshIcon } from "@/components/CommonIcon";
-import { formatDate } from "@/utils/format";
-import { streamFetch } from "@/utils/streamFetch";
 
 import "./index.scss";
 
 import { PodControllerGetContainerNameList, PodControllerGetPodNameList } from "@/apis/v1/apps";
+import useSessionStore from "@/pages/auth/store";
 import useCustomSettingStore from "@/pages/customSetting";
 import useGlobalStore from "@/pages/globalStore";
+
+type Log = {
+  data: string;
+  event: string;
+  id: string;
+  retry?: number;
+};
+
+const MAX_RETRIES = 5;
 
 export default function LogsModal(props: { children: React.ReactElement }) {
   const { children } = props;
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { t } = useTranslation();
   const settingStore = useCustomSettingStore();
+  const { showWarning } = useGlobalStore(({ showWarning }) => ({ showWarning }));
 
   const { currentApp } = useGlobalStore((state) => state);
-
-  const [logs, setLogs] = useState("");
   const [podName, setPodName] = useState("");
   const [containerName, setContainerName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [rowNumber, setRowNumber] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pausedRowNumber, setPausedRowNumber] = useState(0);
+  const [rowCount, setRowCount] = useState(0);
+  const [paused, setPaused] = useState(false);
 
+  const [logs, setLogs] = useState<Log[]>([]);
   const [renderLogs, setRenderLogs] = useState("");
   const [refresh, setRefresh] = useState(true);
+  const retryCountRef = useRef(0);
 
   const darkMode = useColorMode().colorMode === "dark";
 
-  useEffect(() => {
-    const resizeHandler = debounce(() => {
-      if (!isPaused) {
-        setRefresh((pre) => !pre);
+  const addOrUpdateLog = (newLog: Log) => {
+    setLogs((pre) => {
+      const existingLogIndex = pre.findIndex((existingLog) => existingLog.id === newLog.id);
+
+      if (existingLogIndex !== -1) {
+        const updatedLogs = [...pre];
+        updatedLogs[existingLogIndex] = {
+          ...updatedLogs[existingLogIndex],
+          data: newLog.data,
+        };
+        return updatedLogs;
+      } else {
+        return [...pre, newLog];
       }
-    }, 200);
-
-    window.addEventListener("resize", resizeHandler);
-
-    return () => {
-      window.removeEventListener("resize", resizeHandler);
-    };
-  }, [isPaused]);
-
-  useEffect(() => {
-    if (!isPaused) {
-      setRenderLogs(logs.trim());
-    }
-  }, [isPaused, logs]);
+    });
+  };
 
   const { data: podData } = useQuery(
     ["GetPodQuery"],
@@ -103,46 +108,78 @@ export default function LogsModal(props: { children: React.ReactElement }) {
   );
 
   const fetchLogs = useCallback(() => {
-    if (!podName && !containerName) return;
-    const controller = new AbortController();
-    streamFetch({
-      url: `/v1/apps/${currentApp.appid}/logs/${podName}?containerName=${containerName}`,
-      abortSignal: controller,
-      firstResponse() {
-        setIsLoading(false);
-      },
-      onMessage(text) {
-        const regex = /id:\s\d+\s+data:\s(.*)\s+data:/g;
-        const logs = [...text.matchAll(regex)];
-        const regexTime = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)/g;
+    if (!podName || !containerName) return;
+    const ctrl = new AbortController();
 
-        const logStr = logs
-          .map((log) =>
-            log[1].replace(regexTime, (str) => formatDate(str, "YYYY-MM-DD HH:mm:ss.SSS")),
-          )
-          .join("\n");
+    fetchEventSource(
+      `/v1/apps/${currentApp.appid}/logs/${podName}?containerName=${containerName}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token"),
+          Credential: btoa(useSessionStore.getState().getKubeconfig()),
+        },
+        signal: ctrl.signal,
+        async onopen(response) {
+          if (response.ok && response.headers.get("content-type") === EventStreamContentType) {
+            setIsLoading(false);
+          } else {
+            throw new Error(`Unexpected response: ${response.status} ${response.statusText}`);
+          }
+        },
 
-        setRowNumber((pre) => pre + logs.length);
-        setLogs((pre) => pre + logStr + "\n");
+        onmessage(msg) {
+          if (msg.event === "error") {
+            showWarning(msg.data);
+          }
+
+          if (msg.event === "log") {
+            addOrUpdateLog(msg);
+            retryCountRef.current = 0;
+          }
+        },
+
+        onclose() {
+          // if the server closes the connection unexpectedly, retry:
+          if (retryCountRef.current < MAX_RETRIES) {
+            retryCountRef.current += 1;
+            throw new Error("connect closed unexpectedly, retrying...");
+          }
+        },
+
+        onerror(err) {
+          showWarning(err.message);
+          // auto retry fetch
+        },
       },
-    }).catch((e) => {
-      if (e.includes("BodyStreamBuffer was aborted")) {
-        return;
-      }
-      throw e;
-    });
-    return controller;
-  }, [podName, containerName, currentApp.appid]);
+    );
+    return ctrl;
+  }, [podName, containerName, currentApp.appid, showWarning]);
 
   useEffect(() => {
     if (!isOpen) return;
-    setLogs("");
+    setRowCount(0);
+    setLogs([]);
     setIsLoading(true);
-    const controller = fetchLogs();
+    setPaused(false);
+    const ctrl = fetchLogs();
+
     return () => {
-      controller?.abort();
+      ctrl?.abort();
     };
-  }, [podName, containerName, isOpen, refresh]);
+  }, [podName, containerName, isOpen, refresh, fetchLogs]);
+
+  useEffect(() => {
+    const sortedLogs = logs.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+    const concatenatedLogs = sortedLogs.map((log) => log.data).join("");
+    setRenderLogs(concatenatedLogs);
+    const totalRows = concatenatedLogs.split("\n").length;
+    setRowCount(totalRows);
+  }, [logs]);
+
+  useEffect(() => {
+    retryCountRef.current = 0;
+  }, [isOpen]);
 
   return (
     <>
@@ -163,8 +200,6 @@ export default function LogsModal(props: { children: React.ReactElement }) {
                   className="ml-4 !h-8 !w-64"
                   onChange={(e) => {
                     setPodName(e.target.value);
-                    setIsLoading(true);
-                    setLogs("");
                   }}
                   value={podName}
                 >
@@ -185,8 +220,6 @@ export default function LogsModal(props: { children: React.ReactElement }) {
                     className="ml-1 !h-8 !w-32"
                     onChange={(e) => {
                       setContainerName(e.target.value);
-                      setIsLoading(true);
-                      setLogs("");
                     }}
                     value={containerName}
                   >
@@ -205,7 +238,7 @@ export default function LogsModal(props: { children: React.ReactElement }) {
                   px={2}
                   onClick={() => {
                     setRefresh((pre) => !pre);
-                    setIsPaused(false);
+                    setPaused(false);
                   }}
                 >
                   {t("Refresh")}
@@ -221,24 +254,26 @@ export default function LogsModal(props: { children: React.ReactElement }) {
             ) : (
               <div
                 id="log-viewer-container"
-                className="text-sm flex h-full flex-col px-2 font-mono"
+                className={clsx("text-sm flex h-full flex-col px-2 font-mono", {
+                  "log-viewer-container-hide-scrollbar": !paused,
+                })}
                 style={{ fontSize: settingStore.commonSettings.fontSize - 1 }}
-                onWheel={(e) => {
-                  if (e.deltaY < 0 && !isPaused) {
-                    setIsPaused(true);
-                    setPausedRowNumber(rowNumber);
-                  }
-                }}
               >
                 <LogViewer
                   data={renderLogs}
-                  hasLineNumbers={false}
-                  scrollToRow={isPaused ? pausedRowNumber : rowNumber + 1}
+                  hasLineNumbers={true}
+                  scrollToRow={paused ? undefined : rowCount + 300}
                   height={"98%"}
                   onScroll={(e) => {
                     if (e.scrollOffsetToBottom <= 0) {
-                      setIsPaused(false);
+                      setPaused(false);
+                      return;
                     }
+                    if (!e.scrollUpdateWasRequested) {
+                      setPaused(true);
+                      return;
+                    }
+                    setPaused(false);
                   }}
                   toolbar={
                     <div className="absolute right-24 top-4">
@@ -251,10 +286,10 @@ export default function LogsModal(props: { children: React.ReactElement }) {
                   }
                 />
                 <div className="absolute bottom-1 w-[95%]">
-                  {isPaused && (
+                  {paused && (
                     <HStack
                       onClick={() => {
-                        setIsPaused(false);
+                        setPaused(false);
                       }}
                       className={clsx(
                         "flex w-full cursor-pointer items-center justify-center",
