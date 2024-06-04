@@ -18,5 +18,13 @@ sealos build -t docker.io/zacharywin/sealaf:latest --platform linux/amd64 -f Kub
 ## How to deploy
 
 ```bash
+# 1. Make sure that object storage is installed
+curl -O https://raw.githubusercontent.com/minio/operator/master/helm-releases/operator-5.0.6.tgz
+helm install --namespace minio-system --create-namespace minio-operator operator-5.0.6.tgz
+sealos run ghcr.io/labring/sealos-cloud-objectstorage:latest -e cloudDomain="127.0.0.1.nip.io"
+
+# 2. Copy the wildcard-cert secret to sealaf-system
+
+# 3. Install sealaf
 sealos run docker.io/zacharywin/sealaf:latest --env cloudDomain="127.0.0.1.nip.io"
 ```
