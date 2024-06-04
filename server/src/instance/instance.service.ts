@@ -103,6 +103,7 @@ export class InstanceService {
     deployment.spec = await this.makeDeploymentSpec(
       app,
       deployment.spec.template.metadata.labels,
+      this.getRuntimeLabel(appid),
     )
     const appsV1Api = this.cluster.makeAppsV1Api()
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
@@ -145,7 +146,7 @@ export class InstanceService {
     // create deployment
     const data = new V1Deployment()
     data.metadata = { name, labels }
-    data.spec = await this.makeDeploymentSpec(app, labels)
+    data.spec = await this.makeDeploymentSpec(app, labels, labels)
 
     const appsV1Api = this.cluster.makeAppsV1Api()
     const res = await appsV1Api.createNamespacedDeployment(namespace, data)
@@ -218,6 +219,7 @@ export class InstanceService {
   private async makeDeploymentSpec(
     app: ApplicationWithRelations,
     labels: Record<string, string>,
+    matchLabels: Record<string, string>,
   ): Promise<V1DeploymentSpec> {
     const { appid, region, user } = app
     assert(region, 'region is required')
@@ -301,7 +303,7 @@ export class InstanceService {
 
     const spec: V1DeploymentSpec = {
       replicas: 1,
-      selector: { matchLabels: labels },
+      selector: { matchLabels },
       template: {
         metadata: { labels },
         spec: {

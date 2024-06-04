@@ -242,7 +242,10 @@ export class FunctionService {
     try {
       await session.withTransaction(async () => {
         const coll = db.collection(CN_PUBLISHED_FUNCTIONS)
-        await coll.deleteOne(
+        if (func._id) {
+          await coll.deleteOne({ _id: func._id }, { session })
+        }
+        await coll.deleteMany(
           { name: oldFuncName ? oldFuncName : func.name },
           { session },
         )
