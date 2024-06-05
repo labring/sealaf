@@ -7,7 +7,7 @@ import clsx from "clsx";
 import { APP_PHASE_STATUS, APP_STATUS, COLOR_MODE, Pages } from "@/constants/index";
 
 import { ApplicationControllerFindOne } from "@/apis/v1/applications";
-import InitLog from "@/pages/app/mods/StatusBar/LogsModal/initLog";
+import InitLog from "@/pages/app/mods/StatusBar/LogsModal/InitLog";
 import useGlobalStore from "@/pages/globalStore";
 
 export default function FunctionLayout() {
