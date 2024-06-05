@@ -33,3 +33,4 @@ update-changelog.sh
 runtimes/nodejs-esm
 yarn.lock
 deploy/logs/sealos.log
+deploy/registry
