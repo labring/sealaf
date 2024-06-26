@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Center, Spinner } from "@chakra-ui/react";
 import { useMutation } from "@tanstack/react-query";
+import { SessionV1 } from "@zjy365/sealos-desktop-sdk/*";
 import { createSealosApp, sealosApp } from "@zjy365/sealos-desktop-sdk/app";
 
 import useSessionStore from "./store";
@@ -17,9 +18,29 @@ const AuthPage = () => {
 
   useEffect(() => {
     const initApp = async () => {
+      const sealosUser = import.meta.env.VITE_SEALOS_MOCK_USER;
+      const sealosKc = import.meta.env.VITE_SEALOS_MOCK_KC;
+
+      if (sealosUser && sealosKc) {
+        const testSession: SessionV1 = {
+          user: {
+            id: "",
+            name: sealosUser,
+            avatar: "",
+            k8sUsername: "",
+            nsid: "",
+          },
+          kubeconfig: sealosKc,
+        };
+        setSession(testSession);
+        return;
+      }
+
       const result = await sealosApp.getSession();
+
       setSession(result);
     };
+
     initApp().finally(() => setIsInit(true));
   }, []);
 
