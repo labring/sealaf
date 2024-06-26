@@ -151,7 +151,7 @@ export class DedicatedDatabaseService {
       limitMemory,
       requestCPU,
       requestMemory,
-      capacity,
+      capacity: capacity / 1024,
       replicas,
     })
 
@@ -202,6 +202,7 @@ export class DedicatedDatabaseService {
       options: {
         authSource: 'admin',
         replicaSet: `${name}-mongodb`,
+        readPreference: 'secondaryPreferred',
         w: 'majority',
       },
       scheme: 'mongodb',
