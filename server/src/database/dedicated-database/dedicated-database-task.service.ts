@@ -99,10 +99,12 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    await this.dbService.databaseConnectionIsOk(appid)
+    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+
     manifest = await this.dbService.getDeployManifest(region, user, appid)
     const unavailable = manifest?.status?.phase !== 'Running'
-    if (unavailable) {
+
+    if (unavailable && !connectionOk) {
       await this.relock(appid, waitingTime)
       return
     }

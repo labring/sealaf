@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { Region } from 'src/region/entities/region'
 import {
   DedicatedDatabase,
@@ -36,6 +36,8 @@ const p_exec = promisify(exec)
 
 @Injectable()
 export class DedicatedDatabaseService {
+  private readonly logger = new Logger(DedicatedDatabase.name)
+
   constructor(
     private readonly cluster: ClusterService,
     private readonly mongoService: MongoService,
@@ -288,7 +290,7 @@ export class DedicatedDatabaseService {
         `mongodump --uri='${connectionUri}' --gzip --archive=${filePath}`,
       )
     } catch (error) {
-      console.error(`failed to export db ${appid}`, error)
+      this.logger.error(`failed to export db ${appid}`, error)
       throw error
     } finally {
       await SystemDatabase.db
@@ -387,15 +389,36 @@ export class DedicatedDatabaseService {
     }
   }
 
-  async databaseConnectionIsOk(appid: string) {
+  async databaseConnectionIsOk(appid: string): Promise<boolean> {
     try {
       const { client } = await this.findAndConnect(appid)
       const admin = client.db('admin')
       const replSetStatus = await admin.command({ replSetGetStatus: 1 })
-      console.log(replSetStatus)
+      const members = replSetStatus.members
+      const replicaSetOk: boolean = replSetStatus.ok === 1
 
-      return true
+      const healthyMembers = members.filter(
+        (member: any) => member.health === 1,
+      )
+
+      const primary = healthyMembers.find(
+        (member: any) => member.stateStr === 'PRIMARY',
+      )
+
+      const majorityCount = Math.ceil(members.length / 2)
+
+      const isClusterHealthy =
+        replicaSetOk && primary && healthyMembers.length >= majorityCount
+
+      if (isClusterHealthy) {
+        return true
+      }
+
+      return false
     } catch (error) {
+      this.logger.verbose(
+        `dedicatedDatabase health check failed ${appid}\n${error.message}`,
+      )
       return false
     }
   }
