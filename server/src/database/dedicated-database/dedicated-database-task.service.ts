@@ -6,7 +6,7 @@ import {
   DedicatedDatabaseState,
 } from '../entities/dedicated-database'
 import { DedicatedDatabaseService } from './dedicated-database.service'
-import { TASK_LOCK_INIT_TIME } from 'src/constants'
+import { ServerConfig, TASK_LOCK_INIT_TIME } from 'src/constants'
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from 'src/region/region.service'
 import { ClusterService } from 'src/region/cluster/cluster.service'
@@ -25,6 +25,10 @@ export class DedicatedDatabaseTaskService {
 
   @Cron(CronExpression.EVERY_SECOND)
   async tick() {
+    if (ServerConfig.DISABLED_INSTANCE_TASK) {
+      return
+    }
+
     this.handleDeletingPhase().catch((err) => {
       this.logger.error(err)
     })
@@ -95,6 +99,7 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
+    await this.dbService.databaseConnectionIsOk(appid)
     manifest = await this.dbService.getDeployManifest(region, user, appid)
     const unavailable = manifest?.status?.phase !== 'Running'
     if (unavailable) {

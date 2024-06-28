@@ -387,6 +387,19 @@ export class DedicatedDatabaseService {
     }
   }
 
+  async databaseConnectionIsOk(appid: string) {
+    try {
+      const { client } = await this.findAndConnect(appid)
+      const admin = client.db('admin')
+      const replSetStatus = await admin.command({ replSetGetStatus: 1 })
+      console.log(replSetStatus)
+
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
   async checkDatabaseSyncLimit(uid: ObjectId) {
     const count = await SystemDatabase.db
       .collection<DatabaseSyncRecord>('DatabaseSyncRecord')
