@@ -204,7 +204,7 @@ export class DedicatedDatabaseService {
       options: {
         authSource: 'admin',
         replicaSet: `${name}-mongodb`,
-        readPreference: 'secondaryPreferred',
+        // readPreference: 'secondaryPreferred',
         w: 'majority',
       },
       scheme: 'mongodb',
