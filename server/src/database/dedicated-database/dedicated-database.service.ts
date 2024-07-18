@@ -160,6 +160,61 @@ export class DedicatedDatabaseService {
     return manifest
   }
 
+  async applyKubeBlockOpsRequestManifest(user: User, appid: string) {
+    const manifest = this.makeKubeBlockOpsRequestManifest(appid, user)
+    const res = await this.cluster.applyYamlString(manifest, user.namespace)
+    return res
+  }
+
+  async deleteKubeBlockOpsManifest(user: User, appid: string) {
+    const manifest = await this.getKubeBlockOpsRequestManifest(user, appid)
+    const res = await this.cluster.deleteCustomObject(manifest)
+    return res
+  }
+
+  async getKubeBlockOpsRequestManifest(user: User, appid: string) {
+    const api = this.cluster.makeObjectApi()
+    const emptyManifest = this.makeKubeBlockOpsRequestManifest(appid, user)
+    const specs = loadAllYaml(emptyManifest)
+    assert(
+      specs && specs.length > 0,
+      'the OpsRequest manifest of database should not be empty',
+    )
+    const spec = specs[0]
+    try {
+      const manifest = await api.read(spec)
+      return manifest.body as KubernetesObject & { spec: any; status: any }
+    } catch (err) {
+      return null
+    }
+  }
+
+  makeKubeBlockOpsRequestManifest(appid: string, user: User) {
+    const template = `
+apiVersion: apps.kubeblocks.io/v1alpha1
+kind: OpsRequest
+metadata:
+  name: <%- name %>
+  namespace: <%- namespace %>
+spec:
+  clusterRef: <%- clusterName %>
+  type: Restart 
+  restart:
+  - componentName: mongodb
+`
+    const clusterName = getDedicatedDatabaseName(appid)
+    const namespace = user.namespace
+    const tmpl = _.template(template)
+
+    const manifest = tmpl({
+      name: clusterName,
+      namespace,
+      clusterName,
+    })
+
+    return manifest
+  }
+
   async updateState(appid: string, state: DedicatedDatabaseState) {
     const db = SystemDatabase.db
     const res = await db

@@ -13,6 +13,7 @@ import { DomainState, RuntimeDomain } from 'src/gateway/entities/runtime-domain'
 import { CronTrigger, TriggerState } from 'src/trigger/entities/cron-trigger'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
 import {
+  DedicatedDatabase,
   DedicatedDatabasePhase,
   DedicatedDatabaseState,
 } from 'src/database/entities/dedicated-database'
@@ -109,20 +110,31 @@ export class InstanceTaskService {
     if (!res.value) return
     const app = res.value
 
-    // if waiting time is more than 10 minutes, stop the application
     const waitingTime = Date.now() - app.updatedAt.getTime()
+    // if waiting time is more than 10 minutes, stop the application
     if (waitingTime > 1000 * 60 * 10) {
       await db.collection<Application>('Application').updateOne(
         { appid: app.appid, phase: ApplicationPhase.Starting },
         {
           $set: {
             state: ApplicationState.Stopped,
-            phase: ApplicationPhase.Started,
+            phase: ApplicationPhase.Stopping,
             lockedAt: TASK_LOCK_INIT_TIME,
             updatedAt: new Date(),
           },
         },
       )
+
+      await db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .findOneAndUpdate(
+          {
+            appid: app.appid,
+            state: DedicatedDatabaseState.Running,
+            phase: DedicatedDatabasePhase.Started,
+          },
+          { $set: { state: DedicatedDatabaseState.Stopped } },
+        )
 
       this.logger.log(`${app.appid} updated to state Stopped due to timeout`)
       return
@@ -132,16 +144,10 @@ export class InstanceTaskService {
 
     const ddb = await this.dedicatedDatabaseService.findOne(appid)
     if (ddb) {
-      if (ddb.state === DedicatedDatabaseState.Stopped) {
-        await this.dedicatedDatabaseService.updateState(
-          appid,
-          DedicatedDatabaseState.Running,
-        )
-        await this.relock(appid, waitingTime)
-        return
-      }
-
-      if (ddb.phase !== DedicatedDatabasePhase.Started) {
+      if (
+        ddb.state !== DedicatedDatabaseState.Running &&
+        ddb.phase !== DedicatedDatabasePhase.Started
+      ) {
         await this.relock(appid, waitingTime)
         return
       }
@@ -274,16 +280,6 @@ export class InstanceTaskService {
         { $set: { state: TriggerState.Inactive, updatedAt: new Date() } },
       )
 
-    const ddb = await this.dedicatedDatabaseService.findOne(appid)
-    if (ddb && ddb.state !== DedicatedDatabaseState.Stopped) {
-      await this.dedicatedDatabaseService.updateState(
-        appid,
-        DedicatedDatabaseState.Stopped,
-      )
-      await this.relock(appid, waitingTime)
-      return
-    }
-
     // check if the instance is removed
     const instance = await this.instanceService.get(app.appid)
     if (instance.deployment) {
@@ -295,6 +291,12 @@ export class InstanceTaskService {
     // check if the service is removed
     if (instance.service) {
       await this.instanceService.remove(app.appid)
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    const ddb = await this.dedicatedDatabaseService.findOne(appid)
+    if (ddb && ddb.phase !== DedicatedDatabasePhase.Stopped) {
       await this.relock(appid, waitingTime)
       return
     }
@@ -326,9 +328,7 @@ export class InstanceTaskService {
       .findOneAndUpdate(
         {
           state: ApplicationState.Restarting,
-          phase: {
-            $in: [ApplicationPhase.Started, ApplicationPhase.Stopped],
-          },
+          phase: ApplicationPhase.Started,
           lockedAt: { $lt: new Date(Date.now() - 1000 * this.lockTimeout) },
         },
         { $set: { lockedAt: new Date() } },
@@ -338,20 +338,12 @@ export class InstanceTaskService {
     if (!res.value) return
     const app = res.value
 
-    await this.dedicatedDatabaseService.updateState(
-      app.appid,
-      DedicatedDatabaseState.Restarting,
-    )
-
     await this.instanceService.restart(app.appid)
 
     // update application phase to `Starting`
     await db.collection<Application>('Application').updateOne(
       {
         appid: app.appid,
-        phase: {
-          $in: [ApplicationPhase.Started, ApplicationPhase.Stopped],
-        },
       },
       {
         $set: {
