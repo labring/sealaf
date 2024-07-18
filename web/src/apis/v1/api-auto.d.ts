@@ -89,6 +89,7 @@ declare namespace Definitions {
 
   export type UpdateApplicationStateDto = {
     state?: string;
+    onlyRuntimeFlag?: boolean;
   };
 
   export type UpdateApplicationBundleDto = {

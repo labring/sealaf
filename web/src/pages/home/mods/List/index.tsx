@@ -223,40 +223,81 @@ function List(props: { appList: TApplicationItem[] }) {
                             <span className="text-primary block">{t("SettingPanel.Start")}</span>
                           </MenuItem>
                         ) : (
-                          <ConfirmButton
-                            headerText={t("SettingPanel.Restart")}
-                            bodyText={t("SettingPanel.RestartTips")}
-                            confirmButtonText={String(t("Confirm"))}
-                            onSuccessAction={async (event) => {
-                              event?.preventDefault();
-                              const res = await updateAppStateMutation.mutateAsync({
-                                appid: item.appid,
-                                state: APP_STATUS.Restarting,
-                              });
-                              if (!res.error) {
-                                queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
-                                  return {
-                                    ...old,
-                                    data: old.data.map((app: any) => {
-                                      if (app.appid === item.appid) {
-                                        return {
-                                          ...app,
-                                          phase: APP_STATUS.Restarting,
-                                        };
-                                      }
-                                      return app;
-                                    }),
-                                  };
+                          <>
+                            <ConfirmButton
+                              headerText={t("SettingPanel.Restart")}
+                              bodyText={t("SettingPanel.RestartTips")}
+                              confirmButtonText={String(t("Confirm"))}
+                              onSuccessAction={async (event) => {
+                                event?.preventDefault();
+                                const res = await updateAppStateMutation.mutateAsync({
+                                  appid: item.appid,
+                                  state: APP_STATUS.Restarting,
                                 });
-                              }
-                            }}
-                          >
-                            <MenuItem minH="40px" display={"block"}>
-                              <span className="text-primary block">
-                                {t("SettingPanel.Restart")}
-                              </span>
-                            </MenuItem>
-                          </ConfirmButton>
+                                if (!res.error) {
+                                  queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
+                                    return {
+                                      ...old,
+                                      data: old.data.map((app: any) => {
+                                        if (app.appid === item.appid) {
+                                          return {
+                                            ...app,
+                                            phase: APP_STATUS.Restarting,
+                                          };
+                                        }
+                                        return app;
+                                      }),
+                                    };
+                                  });
+                                }
+                              }}
+                            >
+                              <MenuItem minH="40px" display={"block"}>
+                                <span className="text-primary block">
+                                  {t("SettingPanel.Restart")}
+                                </span>
+                              </MenuItem>
+                            </ConfirmButton>
+
+                            <ConfirmButton
+                              headerText={t("SettingPanel.Restart")}
+                              bodyText={t("SettingPanel.RestartRuntime")}
+                              confirmButtonText={String(t("Confirm"))}
+                              onSuccessAction={async (event) => {
+                                event?.preventDefault();
+                                const res = await updateAppStateMutation.mutateAsync({
+                                  appid: item.appid,
+                                  state: APP_STATUS.Restarting,
+                                });
+                                if (!res.error) {
+                                  queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
+                                    return {
+                                      ...old,
+                                      data: old.data.map((app: any) => {
+                                        if (app.appid === item.appid) {
+                                          return {
+                                            ...app,
+                                            phase: APP_STATUS.Restarting,
+                                          };
+                                        }
+                                        return app;
+                                      }),
+                                    };
+                                  });
+                                }
+                              }}
+                            >
+                              <MenuItem minH="40px" display={"block"}>
+                                <span className="text-primary block">
+                                  {t("SettingPanel.Restart")}
+                                </span>
+                                <span className="block text-[10px]">
+                                  不重启数据库
+                                  {/* {t("SettingPanel.Restart")} */}
+                                </span>
+                              </MenuItem>
+                            </ConfirmButton>
+                          </>
                         )}
 
                         {item.phase === APP_PHASE_STATUS.Started && (

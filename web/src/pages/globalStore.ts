@@ -117,12 +117,17 @@ const useGlobalStore = create<State>()(
         });
       },
 
-      updateCurrentApp: async (app: TApplicationDetail, newState: APP_STATUS) => {
+      updateCurrentApp: async (
+        app: TApplicationDetail,
+        newState: APP_STATUS,
+        onlyRuntimeFlag?: boolean,
+      ) => {
         if (!app) {
           return;
         }
         const restartRes = await ApplicationControllerUpdateState({
           state: newState,
+          onlyRuntimeFlag,
         });
         if (!restartRes.error) {
           set((state) => {
