@@ -111,8 +111,6 @@ const CreateAppModal = (props: {
     defaultValues,
   });
 
-  console.log(currentApp);
-
   const defaultBundle: TypeBundle = {
     cpu: application?.bundle.resource.limitCPU || sortedBundles[0].spec.cpu.value,
     memory: application?.bundle.resource.limitMemory || sortedBundles[0].spec.memory.value,
@@ -173,17 +171,13 @@ const CreateAppModal = (props: {
         break;
 
       case "change":
-        console.log(currentApp);
-        console.log("111");
         res = await changeBundleMutation.mutateAsync({
           ...bundle,
           appid: application?.appid,
           autoscaling,
         });
-        console.log("222");
 
         if (isCurrentApp) {
-          console.log("3333");
           const newResource = {
             ...currentApp.bundle.resource,
             limitCPU: bundle.cpu,
@@ -202,7 +196,6 @@ const CreateAppModal = (props: {
             autoscaling: autoscaling,
           };
           setCurrentApp({ ...currentApp, bundle: newBundle });
-          console.log(currentApp.bundle);
         }
 
         if (
@@ -210,7 +203,6 @@ const CreateAppModal = (props: {
           (bundle.cpu !== application?.bundle.resource.limitCPU ||
             bundle.memory !== application?.bundle.resource.limitMemory)
         ) {
-          console.log("xxxxx");
           updateCurrentApp(
             currentApp!,
             currentApp!.state === APP_STATUS.Stopped ? APP_STATUS.Running : APP_STATUS.Restarting,
