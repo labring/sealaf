@@ -220,8 +220,10 @@ const CreateAppModal = (props: {
             application?.bundle.resource.dedicatedDatabase.capacity !==
               bundle.dedicatedDatabase?.capacity;
 
-          if (!isRunning && (isRuntimeChanged || isDedicatedDatabaseChanged)) {
-            updateCurrentApp(currentApp!, APP_STATUS.Running);
+          if (!isRunning) {
+            if (isRuntimeChanged || isDedicatedDatabaseChanged) {
+              updateCurrentApp(currentApp!, APP_STATUS.Running);
+            }
           }
 
           if (isRunning) {
