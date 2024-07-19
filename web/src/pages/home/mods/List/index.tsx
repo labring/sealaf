@@ -246,6 +246,7 @@ function List(props: { appList: TApplicationItem[] }) {
                                 state: APP_STATUS.Restarting,
                                 onlyRuntimeFlag: onlyRuntimeFlag,
                               });
+                              setOnlyRuntimeFlag(true);
                               if (!res.error) {
                                 queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
                                   return {

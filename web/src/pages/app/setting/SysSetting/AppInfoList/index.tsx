@@ -97,6 +97,7 @@ const AppEnvList: React.FC<AppEnvListProps> = (props = {}) => {
                   onSuccessAction={async (event) => {
                     event?.preventDefault();
                     updateCurrentApp(currentApp!, APP_STATUS.Restarting, onlyRuntimeFlag);
+                    setOnlyRuntimeFlag(true);
                   }}
                 >
                   <Button
