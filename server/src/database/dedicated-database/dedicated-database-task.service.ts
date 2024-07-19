@@ -322,6 +322,7 @@ export class DedicatedDatabaseTaskService {
           },
         },
       )
+      return
     }
 
     const OpsRequestManifest =
