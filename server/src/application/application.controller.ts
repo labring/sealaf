@@ -55,12 +55,6 @@ import { SealosManagerGuard } from 'src/authentication/sealos-manager.guard'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
 import { DedicatedDatabaseState } from 'src/database/entities/dedicated-database'
 
-enum RestartType {
-  Runtime = 'Runtime',
-  RuntimeAndDatabase = 'RuntimeAndDatabase',
-  None = 'None',
-}
-
 @ApiTags('Application')
 @Controller('applications')
 @ApiBearerAuth('Authorization')
@@ -386,31 +380,18 @@ export class ApplicationController {
       await this.instance.reapplyHorizontalPodAutoscaler(app, hpa)
     }
 
-    let restartType: RestartType = RestartType.None
-
-    if (isRunning && (isRuntimeChanged || isDedicatedDatabaseChanged)) {
-      restartType = RestartType.RuntimeAndDatabase
-
-      if (!isDedicatedDatabaseChanged) {
-        restartType = RestartType.Runtime
-      }
-    }
-
-    switch (restartType) {
-      case RestartType.Runtime:
-        await this.application.updateState(appid, ApplicationState.Restarting)
-        break
-      case RestartType.RuntimeAndDatabase:
+    if (isRunning) {
+      if (isRuntimeChanged && isDedicatedDatabaseChanged) {
         await this.application.updateState(appid, ApplicationState.Restarting)
         await this.dedicateDatabase.updateState(
           appid,
           DedicatedDatabaseState.Restarting,
         )
-        break
-      case RestartType.None:
-        break
-      default:
-        break
+      }
+
+      if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
+        await this.application.updateState(appid, ApplicationState.Restarting)
+      }
     }
 
     return ResponseUtil.ok(doc)

@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { t } from "i18next";
 import _ from "lodash";
 
-import { APP_STATUS } from "@/constants/index";
+import { APP_PHASE_STATUS, APP_STATUS } from "@/constants/index";
 
 import { APP_LIST_QUERY_KEY } from "../..";
 import { queryKeys } from "../../service";
@@ -140,8 +140,8 @@ const CreateAppModal = (props: {
       application?.bundle.autoscaling?.targetMemoryUtilizationPercentage || null,
   };
 
-  const [bundle, setBundle] = useState(defaultBundle);
-  const [autoscaling, setAutoscaling] = useState(defaultAutoscaling);
+  const [bundle, setBundle] = useState<TypeBundle>(defaultBundle);
+  const [autoscaling, setAutoscaling] = useState<TypeAutoscaling>(defaultAutoscaling);
 
   const { data: billingResourceOptionsRes, isLoading } = useQuery(
     queryKeys.useBillingResourceOptionsQuery,
@@ -198,15 +198,41 @@ const CreateAppModal = (props: {
           setCurrentApp({ ...currentApp, bundle: newBundle });
         }
 
-        if (
-          currentApp &&
-          (bundle.cpu !== application?.bundle.resource.limitCPU ||
-            bundle.memory !== application?.bundle.resource.limitMemory)
-        ) {
-          updateCurrentApp(
-            currentApp!,
-            currentApp!.state === APP_STATUS.Stopped ? APP_STATUS.Running : APP_STATUS.Restarting,
-          );
+        if (currentApp) {
+          const isRunning =
+            currentApp?.phase === APP_PHASE_STATUS.Started &&
+            currentApp?.state === APP_STATUS.Running;
+
+          const isCpuChanged = application?.bundle.resource.limitCPU !== bundle?.cpu;
+          const isMemoryChanged = application?.bundle.resource.limitMemory !== bundle?.memory;
+          const isAutoscalingCanceled =
+            application?.bundle.autoscaling.enable && autoscaling?.enable;
+
+          const isRuntimeChanged = isCpuChanged || isMemoryChanged || isAutoscalingCanceled;
+
+          const isDedicatedDatabaseChanged =
+            application?.bundle.resource.dedicatedDatabase.limitCPU !==
+              bundle.dedicatedDatabase?.cpu ||
+            application?.bundle.resource.dedicatedDatabase.limitMemory !==
+              bundle.dedicatedDatabase?.memory ||
+            application?.bundle.resource.dedicatedDatabase.replicas !==
+              bundle.dedicatedDatabase?.replicas ||
+            application?.bundle.resource.dedicatedDatabase.capacity !==
+              bundle.dedicatedDatabase?.capacity;
+
+          if (!isRunning && (isRuntimeChanged || isDedicatedDatabaseChanged)) {
+            updateCurrentApp(currentApp!, APP_STATUS.Running);
+          }
+
+          if (isRunning) {
+            if (isRuntimeChanged && isDedicatedDatabaseChanged) {
+              updateCurrentApp(currentApp!, APP_STATUS.Restarting);
+            }
+
+            if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
+              updateCurrentApp(currentApp!, APP_STATUS.Restarting, true);
+            }
+          }
         }
         break;
 
