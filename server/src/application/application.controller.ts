@@ -381,16 +381,14 @@ export class ApplicationController {
     }
 
     if (isRunning) {
-      if (isRuntimeChanged && isDedicatedDatabaseChanged) {
+      if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
+        await this.application.updateState(appid, ApplicationState.Restarting)
+      } else if (isRuntimeChanged || isDedicatedDatabaseChanged) {
         await this.application.updateState(appid, ApplicationState.Restarting)
         await this.dedicateDatabase.updateState(
           appid,
           DedicatedDatabaseState.Restarting,
         )
-      }
-
-      if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
-        await this.application.updateState(appid, ApplicationState.Restarting)
       }
     }
 

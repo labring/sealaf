@@ -225,12 +225,10 @@ const CreateAppModal = (props: {
           }
 
           if (isRunning) {
-            if (isRuntimeChanged && isDedicatedDatabaseChanged) {
-              updateCurrentApp(currentApp!, APP_STATUS.Restarting);
-            }
-
             if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
               updateCurrentApp(currentApp!, APP_STATUS.Restarting, true);
+            } else if (isRuntimeChanged || isDedicatedDatabaseChanged) {
+              updateCurrentApp(currentApp!, APP_STATUS.Restarting);
             }
           }
         }
