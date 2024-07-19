@@ -6,6 +6,7 @@ import { AddIcon, Search2Icon } from "@chakra-ui/icons";
 import {
   Box,
   Button,
+  Checkbox,
   Input,
   InputGroup,
   InputLeftElement,
@@ -54,6 +55,8 @@ function List(props: { appList: TApplicationItem[] }) {
   const updateAppStateMutation = useMutation((params: any) =>
     ApplicationControllerUpdateState(params),
   );
+
+  const [onlyRuntimeFlag, setOnlyRuntimeFlag] = useState(true);
 
   return (
     <>
@@ -223,81 +226,50 @@ function List(props: { appList: TApplicationItem[] }) {
                             <span className="text-primary block">{t("SettingPanel.Start")}</span>
                           </MenuItem>
                         ) : (
-                          <>
-                            <ConfirmButton
-                              headerText={t("SettingPanel.Restart")}
-                              bodyText={t("SettingPanel.RestartTips")}
-                              confirmButtonText={String(t("Confirm"))}
-                              onSuccessAction={async (event) => {
-                                event?.preventDefault();
-                                const res = await updateAppStateMutation.mutateAsync({
-                                  appid: item.appid,
-                                  state: APP_STATUS.Restarting,
+                          <ConfirmButton
+                            headerText={t("SettingPanel.Restart")}
+                            bodyText={
+                              <Checkbox
+                                colorScheme="primary"
+                                mt={4}
+                                isChecked={!onlyRuntimeFlag}
+                                onChange={(e) => setOnlyRuntimeFlag(!e.target.checked)}
+                              >
+                                {t("SettingPanel.RestartTips")}
+                              </Checkbox>
+                            }
+                            confirmButtonText={String(t("Confirm"))}
+                            onSuccessAction={async (event) => {
+                              event?.preventDefault();
+                              const res = await updateAppStateMutation.mutateAsync({
+                                appid: item.appid,
+                                state: APP_STATUS.Restarting,
+                                onlyRuntimeFlag: onlyRuntimeFlag,
+                              });
+                              if (!res.error) {
+                                queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
+                                  return {
+                                    ...old,
+                                    data: old.data.map((app: any) => {
+                                      if (app.appid === item.appid) {
+                                        return {
+                                          ...app,
+                                          phase: APP_STATUS.Restarting,
+                                        };
+                                      }
+                                      return app;
+                                    }),
+                                  };
                                 });
-                                if (!res.error) {
-                                  queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
-                                    return {
-                                      ...old,
-                                      data: old.data.map((app: any) => {
-                                        if (app.appid === item.appid) {
-                                          return {
-                                            ...app,
-                                            phase: APP_STATUS.Restarting,
-                                          };
-                                        }
-                                        return app;
-                                      }),
-                                    };
-                                  });
-                                }
-                              }}
-                            >
-                              <MenuItem minH="40px" display={"block"}>
-                                <span className="text-primary block">
-                                  {t("SettingPanel.Restart")}
-                                </span>
-                              </MenuItem>
-                            </ConfirmButton>
-
-                            <ConfirmButton
-                              headerText={t("SettingPanel.Restart")}
-                              bodyText={t("SettingPanel.RestartRuntime")}
-                              confirmButtonText={String(t("Confirm"))}
-                              onSuccessAction={async (event) => {
-                                event?.preventDefault();
-                                const res = await updateAppStateMutation.mutateAsync({
-                                  appid: item.appid,
-                                  state: APP_STATUS.Restarting,
-                                });
-                                if (!res.error) {
-                                  queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
-                                    return {
-                                      ...old,
-                                      data: old.data.map((app: any) => {
-                                        if (app.appid === item.appid) {
-                                          return {
-                                            ...app,
-                                            phase: APP_STATUS.Restarting,
-                                          };
-                                        }
-                                        return app;
-                                      }),
-                                    };
-                                  });
-                                }
-                              }}
-                            >
-                              <MenuItem minH="40px" display={"block"}>
-                                <span className="text-primary block">
-                                  {t("SettingPanel.Restart")}
-                                </span>
-                                <span className="block text-[10px]">
-                                  不重启数据库
-                                  {/* {t("SettingPanel.Restart")} */}
-                                </span>
-                              </MenuItem>
-                            </ConfirmButton>
-                          </>
+                              }
+                            }}
+                          >
+                            <MenuItem minH="40px" display={"block"}>
+                              <span className="text-primary block">
+                                {t("SettingPanel.Restart")}
+                              </span>
+                            </MenuItem>
+                          </ConfirmButton>
                         )}
 
                         {item.phase === APP_PHASE_STATUS.Started && (

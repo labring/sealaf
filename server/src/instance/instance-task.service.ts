@@ -125,6 +125,7 @@ export class InstanceTaskService {
         },
       )
 
+      // if databse operation success but runtime failed
       await db
         .collection<DedicatedDatabase>('DedicatedDatabase')
         .findOneAndUpdate(
@@ -143,10 +144,16 @@ export class InstanceTaskService {
     const appid = app.appid
 
     const ddb = await this.dedicatedDatabaseService.findOne(appid)
+
+    if (!ddb) {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
     if (ddb) {
       if (
-        ddb.state !== DedicatedDatabaseState.Running &&
-        ddb.phase !== DedicatedDatabasePhase.Started
+        ddb.phase !== DedicatedDatabasePhase.Started ||
+        ddb.state !== DedicatedDatabaseState.Running
       ) {
         await this.relock(appid, waitingTime)
         return
@@ -296,7 +303,16 @@ export class InstanceTaskService {
     }
 
     const ddb = await this.dedicatedDatabaseService.findOne(appid)
-    if (ddb && ddb.phase !== DedicatedDatabasePhase.Stopped) {
+
+    if (!ddb) {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    if (
+      ddb.phase !== DedicatedDatabasePhase.Stopped ||
+      ddb.state !== DedicatedDatabaseState.Stopped
+    ) {
       await this.relock(appid, waitingTime)
       return
     }

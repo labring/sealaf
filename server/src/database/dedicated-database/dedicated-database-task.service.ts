@@ -73,11 +73,13 @@ export class DedicatedDatabaseTaskService {
     const user = await this.clusterService.getUserByAppid(appid)
     let manifest = await this.dbService.getDeployManifest(region, user, appid)
 
+    const waitingTime = Date.now() - data.updatedAt.getTime()
+
     if (!manifest || manifest.spec.componentSpecs[0].replicas === 0) {
       await this.dbService.applyDeployManifest(region, user, appid)
+      await this.relock(appid, waitingTime)
+      return
     }
-
-    const waitingTime = Date.now() - data.updatedAt.getTime()
 
     const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
 
@@ -302,11 +304,31 @@ export class DedicatedDatabaseTaskService {
     const region = await this.regionService.findByAppId(appid)
     const user = await this.clusterService.getUserByAppid(appid)
 
+    const isDeployManifestChanged =
+      await this.dbService.isDeployManifestChanged(region, user, appid)
+
+    if (isDeployManifestChanged) {
+      await this.dbService.applyDeployManifest(region, user, appid)
+      await db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
+        {
+          appid: appid,
+        },
+        {
+          $set: {
+            state: DedicatedDatabaseState.Running,
+            phase: DedicatedDatabasePhase.Starting,
+            lockedAt: TASK_LOCK_INIT_TIME,
+            updatedAt: new Date(),
+          },
+        },
+      )
+    }
+
     const OpsRequestManifest =
-      await this.dbService.getKubeBlockOpsRequestManifest(user, appid)
+      await this.dbService.getKubeBlockOpsRequestManifest(region, user, appid)
 
     if (!OpsRequestManifest) {
-      await this.dbService.applyKubeBlockOpsRequestManifest(user, appid)
+      await this.dbService.applyKubeBlockOpsRequestManifest(region, user, appid)
       await this.relock(appid, waitingTime)
       return
     }
@@ -317,9 +339,7 @@ export class DedicatedDatabaseTaskService {
       appid,
     )
 
-    const manifestExists = ddbDeployManifest && OpsRequestManifest
-
-    if (!manifestExists) {
+    if (!ddbDeployManifest) {
       await this.relock(appid, waitingTime)
       return
     }
@@ -329,7 +349,7 @@ export class DedicatedDatabaseTaskService {
       OpsRequestManifest?.status?.phase === 'Succeed'
 
     if (isRestartSuccessful) {
-      await this.dbService.deleteKubeBlockOpsManifest(user, appid)
+      await this.dbService.deleteKubeBlockOpsManifest(region, user, appid)
       await db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
         {
           appid: appid,

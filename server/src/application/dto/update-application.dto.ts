@@ -5,6 +5,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Length,
   ValidateNested,
@@ -58,6 +59,7 @@ export class UpdateApplicationStateDto {
     description: 'Flag for runtime only operations',
     type: Boolean,
   })
+  @IsOptional()
   @IsBoolean()
   onlyRuntimeFlag?: boolean
 }

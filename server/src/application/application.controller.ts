@@ -287,9 +287,16 @@ export class ApplicationController {
     @Body() dto: UpdateApplicationBundleDto,
     @InjectApplication() app: ApplicationWithRelations,
   ) {
-    // todo
-    // 如果 restarting 不允许变更配置
-    // 仅允许 started  和 stopped 变更配置
+    // only running and stopped application can update bundle
+    if (
+      app.phase !== ApplicationPhase.Started &&
+      app.phase !== ApplicationPhase.Stopped
+    ) {
+      return ResponseUtil.error(
+        'The application is not running or stopped, can not update bundle',
+      )
+    }
+
     const error = dto.autoscaling.validate()
     if (error) {
       return ResponseUtil.error(error)
