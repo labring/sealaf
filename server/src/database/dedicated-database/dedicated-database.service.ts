@@ -204,6 +204,7 @@ export class DedicatedDatabaseService {
     user: User,
     appid: string,
   ) {
+    console.log(3)
     const manifest = this.makeKubeBlockOpsRequestManifest(region, user, appid)
     const res = await this.cluster.applyYamlString(manifest, user.namespace)
     return res
@@ -224,6 +225,7 @@ export class DedicatedDatabaseService {
     user: User,
     appid: string,
   ) {
+    console.log(2)
     const api = this.cluster.makeObjectApi()
     const emptyManifest = this.makeKubeBlockOpsRequestManifest(
       region,
@@ -256,6 +258,7 @@ export class DedicatedDatabaseService {
       namespace,
       clusterName,
     })
+    console.log(1)
 
     return manifest
   }
