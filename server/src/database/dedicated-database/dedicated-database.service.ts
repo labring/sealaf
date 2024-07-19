@@ -206,7 +206,12 @@ export class DedicatedDatabaseService {
   ) {
     console.log(3)
     const manifest = this.makeKubeBlockOpsRequestManifest(region, user, appid)
-    const res = await this.cluster.applyYamlString(manifest, user.namespace)
+    let res
+    try {
+      res = await this.cluster.applyYamlString(manifest, user.namespace)
+    } catch (error) {
+      console.log(error)
+    }
     return res
   }
 
