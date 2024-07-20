@@ -76,7 +76,13 @@ export class DedicatedDatabaseTaskService {
     const waitingTime = Date.now() - data.updatedAt.getTime()
 
     if (!manifest || manifest.spec.componentSpecs[0].replicas === 0) {
-      await this.dbService.applyDeployManifest(region, user, appid)
+      try {
+        await this.dbService.applyDeployManifest(region, user, appid)
+      } catch (error) {
+        this.logger.error(
+          `apply dedicated database ${appid} yaml error:\n ${error.message}`,
+        )
+      }
       await this.relock(appid, waitingTime)
       return
     }
@@ -329,7 +335,17 @@ export class DedicatedDatabaseTaskService {
       await this.dbService.getKubeBlockOpsRequestManifest(region, user, appid)
 
     if (!OpsRequestManifest) {
-      await this.dbService.applyKubeBlockOpsRequestManifest(region, user, appid)
+      try {
+        await this.dbService.applyKubeBlockOpsRequestManifest(
+          region,
+          user,
+          appid,
+        )
+      } catch (error) {
+        this.logger.error(
+          `apply dedicated database restart ${appid} yaml error:\n ${error.message}`,
+        )
+      }
       await this.relock(appid, waitingTime)
       return
     }
