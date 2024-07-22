@@ -114,7 +114,7 @@ export class InstanceTaskService {
     // if waiting time is more than 10 minutes, stop the application
     if (waitingTime > 1000 * 60 * 10) {
       await db.collection<Application>('Application').updateOne(
-        { appid: app.appid, phase: ApplicationPhase.Starting },
+        { appid: app.appid },
         {
           $set: {
             state: ApplicationState.Stopped,
@@ -134,7 +134,12 @@ export class InstanceTaskService {
             state: DedicatedDatabaseState.Running,
             phase: DedicatedDatabasePhase.Started,
           },
-          { $set: { state: DedicatedDatabaseState.Stopped } },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Stopped,
+              phase: DedicatedDatabasePhase.Stopping,
+            },
+          },
         )
 
       this.logger.log(`${app.appid} updated to state Stopped due to timeout`)
