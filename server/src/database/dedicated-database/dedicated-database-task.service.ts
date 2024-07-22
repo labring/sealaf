@@ -57,7 +57,7 @@ export class DedicatedDatabaseTaskService {
       .collection<DedicatedDatabase>('DedicatedDatabase')
       .findOneAndUpdate(
         {
-          state: { $ne: DedicatedDatabaseState.Restarting },
+          state: DedicatedDatabaseState.Running,
           phase: DedicatedDatabasePhase.Starting,
           lockedAt: { $lt: new Date(Date.now() - this.lockTimeout * 1000) },
         },
