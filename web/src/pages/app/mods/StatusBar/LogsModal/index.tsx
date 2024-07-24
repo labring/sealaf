@@ -38,6 +38,21 @@ type Log = {
 
 const MAX_RETRIES = 5;
 
+const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/;
+
+function convertLogTimestamp(log: Log): Log {
+  const match = log.data.match(timestampRegex);
+
+  if (match) {
+    const timestamp = match[0];
+    const date = new Date(timestamp);
+    const clientTimeString = date.toString();
+    log.data = log.data.replace(timestamp, clientTimeString);
+  }
+
+  return log;
+}
+
 export default function LogsModal(props: { children: React.ReactElement }) {
   const { children } = props;
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -128,13 +143,14 @@ export default function LogsModal(props: { children: React.ReactElement }) {
           }
         },
 
-        onmessage(msg) {
+        onmessage(msg: Log) {
           if (msg.event === "error") {
             showWarning(msg.data);
           }
 
           if (msg.event === "log") {
-            addOrUpdateLog(msg);
+            const log: Log = convertLogTimestamp(msg);
+            addOrUpdateLog(log);
             retryCountRef.current = 0;
           }
         },
