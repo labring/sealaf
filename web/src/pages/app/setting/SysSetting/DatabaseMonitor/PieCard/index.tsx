@@ -14,7 +14,7 @@ export default function PieCard(props: {
 }) {
   const { t } = useTranslation();
   const { data, maxValue, title, colors } = props;
-  const usedData = uniformCapacity(data[0].value[1] || 0);
+  const usedData = uniformCapacity(data[0]?.value[1] || 0);
   const percentage = (usedData / maxValue) * 100;
   const pieData = useMemo(
     () =>

@@ -52,6 +52,8 @@ import { InstanceService } from 'src/instance/instance.service'
 import { BindCustomDomainDto } from './dto/bind-custom-domain.dto'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { SealosManagerGuard } from 'src/authentication/sealos-manager.guard'
+import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
+import { DedicatedDatabaseState } from 'src/database/entities/dedicated-database'
 
 @ApiTags('Application')
 @Controller('applications')
@@ -61,6 +63,7 @@ export class ApplicationController {
 
   constructor(
     private readonly application: ApplicationService,
+    private readonly dedicateDatabase: DedicatedDatabaseService,
     private readonly instance: InstanceService,
     private readonly fn: FunctionService,
     private readonly region: RegionService,
@@ -220,7 +223,6 @@ export class ApplicationController {
     if (dto.state === ApplicationState.Deleted) {
       throw new ForbiddenException('cannot update state to deleted')
     }
-
     // check: only running application can restart
     if (
       dto.state === ApplicationState.Restarting &&
@@ -254,7 +256,16 @@ export class ApplicationController {
       )
     }
 
+    if (dto.state === ApplicationState.Restarting && dto?.onlyRuntimeFlag) {
+      const doc = await this.application.updateState(appid, dto.state)
+      return ResponseUtil.ok(doc)
+    }
+
     const doc = await this.application.updateState(appid, dto.state)
+    await this.dedicateDatabase.updateState(
+      appid,
+      dto.state as unknown as DedicatedDatabaseState,
+    )
     return ResponseUtil.ok(doc)
   }
 
@@ -270,6 +281,16 @@ export class ApplicationController {
     @Body() dto: UpdateApplicationBundleDto,
     @InjectApplication() app: ApplicationWithRelations,
   ) {
+    // only running and stopped application can update bundle
+    if (
+      app.phase !== ApplicationPhase.Started &&
+      app.phase !== ApplicationPhase.Stopped
+    ) {
+      return ResponseUtil.error(
+        'The application is not running or stopped, can not update bundle',
+      )
+    }
+
     const error = dto.autoscaling.validate()
     if (error) {
       return ResponseUtil.error(error)
@@ -296,7 +317,7 @@ export class ApplicationController {
 
     const origin = app.bundle
 
-    const checkSpec = await this.checkResourceSpecification(dto, regionId)
+    const checkSpec = await this.checkResourceSpecification(dto, regionId, app)
     if (!checkSpec) {
       return ResponseUtil.error('invalid resource specification')
     }
@@ -328,8 +349,13 @@ export class ApplicationController {
     const isCpuChanged = origin.resource.limitCPU !== doc.resource.limitCPU
     const isMemoryChanged =
       origin.resource.limitMemory !== doc.resource.limitMemory
+
     const isAutoscalingCanceled =
       !doc.autoscaling.enable && origin.autoscaling.enable
+
+    const isRuntimeChanged =
+      isCpuChanged || isMemoryChanged || isAutoscalingCanceled
+
     const isDedicatedDatabaseChanged =
       !!origin.resource.dedicatedDatabase &&
       (!isEqual(
@@ -354,14 +380,16 @@ export class ApplicationController {
       await this.instance.reapplyHorizontalPodAutoscaler(app, hpa)
     }
 
-    if (
-      isRunning &&
-      (isCpuChanged ||
-        isMemoryChanged ||
-        isAutoscalingCanceled ||
-        isDedicatedDatabaseChanged)
-    ) {
-      await this.application.updateState(appid, ApplicationState.Restarting)
+    if (isRunning) {
+      if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
+        await this.application.updateState(appid, ApplicationState.Restarting)
+      } else if (isRuntimeChanged || isDedicatedDatabaseChanged) {
+        await this.application.updateState(appid, ApplicationState.Restarting)
+        await this.dedicateDatabase.updateState(
+          appid,
+          DedicatedDatabaseState.Restarting,
+        )
+      }
     }
 
     return ResponseUtil.ok(doc)
@@ -467,8 +495,67 @@ export class ApplicationController {
   private async checkResourceSpecification(
     dto: UpdateApplicationBundleDto,
     regionId: ObjectId,
+    app?: ApplicationWithRelations,
   ) {
     const resourceOptions = await this.resource.findAllByRegionId(regionId)
+
+    if (app) {
+      const checkSpec = resourceOptions.every((option) => {
+        switch (option.type) {
+          case 'cpu':
+            return (
+              option.specs.some((spec) => spec.value === dto.cpu) ||
+              app.bundle.resource.limitCPU === dto.cpu
+            )
+          case 'memory':
+            return (
+              option.specs.some((spec) => spec.value === dto.memory) ||
+              app.bundle.resource.limitMemory === dto.memory
+            )
+          // dedicated database
+          case 'dedicatedDatabaseCPU':
+            return (
+              !dto.dedicatedDatabase?.cpu ||
+              option.specs.some(
+                (spec) => spec.value === dto.dedicatedDatabase.cpu,
+              ) ||
+              app.bundle.resource.dedicatedDatabase?.limitCPU ===
+                dto.dedicatedDatabase.cpu
+            )
+          case 'dedicatedDatabaseMemory':
+            return (
+              !dto.dedicatedDatabase?.memory ||
+              option.specs.some(
+                (spec) => spec.value === dto.dedicatedDatabase.memory,
+              ) ||
+              app.bundle.resource.dedicatedDatabase?.limitMemory ===
+                dto.dedicatedDatabase.memory
+            )
+          case 'dedicatedDatabaseCapacity':
+            return (
+              !dto.dedicatedDatabase?.capacity ||
+              option.specs.some(
+                (spec) => spec.value === dto.dedicatedDatabase.capacity,
+              ) ||
+              app.bundle.resource.dedicatedDatabase?.capacity ===
+                dto.dedicatedDatabase.capacity
+            )
+          case 'dedicatedDatabaseReplicas':
+            return (
+              !dto.dedicatedDatabase?.replicas ||
+              option.specs.some(
+                (spec) => spec.value === dto.dedicatedDatabase.replicas,
+              ) ||
+              app.bundle.resource.dedicatedDatabase?.replicas ===
+                dto.dedicatedDatabase.replicas
+            )
+          default:
+            return true
+        }
+      })
+      return checkSpec
+    }
+
     const checkSpec = resourceOptions.every((option) => {
       switch (option.type) {
         case 'cpu':

@@ -6,6 +6,7 @@ import { AddIcon, Search2Icon } from "@chakra-ui/icons";
 import {
   Box,
   Button,
+  Checkbox,
   Input,
   InputGroup,
   InputLeftElement,
@@ -54,6 +55,8 @@ function List(props: { appList: TApplicationItem[] }) {
   const updateAppStateMutation = useMutation((params: any) =>
     ApplicationControllerUpdateState(params),
   );
+
+  const [onlyRuntimeFlag, setOnlyRuntimeFlag] = useState(true);
 
   return (
     <>
@@ -225,14 +228,25 @@ function List(props: { appList: TApplicationItem[] }) {
                         ) : (
                           <ConfirmButton
                             headerText={t("SettingPanel.Restart")}
-                            bodyText={t("SettingPanel.RestartTips")}
+                            bodyText={
+                              <Checkbox
+                                colorScheme="primary"
+                                mt={4}
+                                isChecked={!onlyRuntimeFlag}
+                                onChange={(e) => setOnlyRuntimeFlag(!e.target.checked)}
+                              >
+                                {t("SettingPanel.RestartTips")}
+                              </Checkbox>
+                            }
                             confirmButtonText={String(t("Confirm"))}
                             onSuccessAction={async (event) => {
                               event?.preventDefault();
                               const res = await updateAppStateMutation.mutateAsync({
                                 appid: item.appid,
                                 state: APP_STATUS.Restarting,
+                                onlyRuntimeFlag: onlyRuntimeFlag,
                               });
+                              setOnlyRuntimeFlag(true);
                               if (!res.error) {
                                 queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
                                   return {

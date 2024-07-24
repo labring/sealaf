@@ -30,6 +30,7 @@ import {
   DatabaseSyncRecord,
   DatabaseSyncState,
 } from '../entities/database-sync-record'
+import { extractNumber } from 'src/utils/number'
 
 const getDedicatedDatabaseName = (appid: string) => `sealaf-${appid}`
 const p_exec = promisify(exec)
@@ -155,6 +156,105 @@ export class DedicatedDatabaseService {
       requestMemory,
       capacity: capacity / 1024,
       replicas,
+    })
+
+    return manifest
+  }
+
+  async isDeployManifestChanged(
+    region: Region,
+    user: User,
+    appid: string,
+  ): Promise<boolean> {
+    const ddbDeployManifest = await this.getDeployManifest(region, user, appid)
+    const replicas = Number(ddbDeployManifest.spec.componentSpecs[0].replicas)
+
+    const limitCPU = extractNumber(
+      ddbDeployManifest.spec.componentSpecs[0].resources?.limits?.cpu,
+    )
+    const limitMemory = extractNumber(
+      ddbDeployManifest.spec.componentSpecs[0].resources?.limits?.memory,
+    )
+    const capacity = extractNumber(
+      ddbDeployManifest.spec.componentSpecs[0]?.volumeClaimTemplates[0]?.spec
+        ?.resources?.requests?.storage,
+    )
+
+    const spec = await this.getDedicatedDatabaseSpec(appid)
+
+    const isLimitCpuMatch =
+      spec.limitCPU === limitCPU || spec.limitCPU / 1000 === limitCPU
+    const isLimitMemoryMatch =
+      spec.limitMemory === limitMemory ||
+      spec.limitMemory / 1024 === limitMemory
+    const isCapacityMatch =
+      spec.capacity === capacity || spec.capacity / 1024 === capacity
+    const isReplicasMatch = spec.replicas === replicas
+
+    return !(
+      isLimitCpuMatch &&
+      isLimitMemoryMatch &&
+      isReplicasMatch &&
+      isCapacityMatch
+    )
+  }
+
+  async applyKubeBlockOpsRequestManifest(
+    region: Region,
+    user: User,
+    appid: string,
+  ) {
+    const manifest = this.makeKubeBlockOpsRequestManifest(region, user, appid)
+    const res = await this.cluster.applyYamlString(manifest, user.namespace)
+    return res
+  }
+
+  async deleteKubeBlockOpsManifest(region: Region, user: User, appid: string) {
+    const manifest = await this.getKubeBlockOpsRequestManifest(
+      region,
+      user,
+      appid,
+    )
+    const res = await this.cluster.deleteCustomObject(manifest)
+    return res
+  }
+
+  async getKubeBlockOpsRequestManifest(
+    region: Region,
+    user: User,
+    appid: string,
+  ) {
+    const api = this.cluster.makeObjectApi()
+    const emptyManifest = this.makeKubeBlockOpsRequestManifest(
+      region,
+      user,
+      appid,
+    )
+    const specs = loadAllYaml(emptyManifest)
+    assert(
+      specs && specs.length > 0,
+      'the OpsRequest manifest of database should not be empty',
+    )
+    const spec = specs[0]
+    try {
+      const manifest = await api.read(spec)
+      return manifest.body as KubernetesObject & { spec: any; status: any }
+    } catch (err) {
+      return null
+    }
+  }
+
+  makeKubeBlockOpsRequestManifest(region: Region, user: User, appid: string) {
+    const clusterName = getDedicatedDatabaseName(appid)
+    const namespace = user.namespace
+
+    const template = region.deployManifest.databaseOpsRequest
+    const tmpl = _.template(template)
+
+    const manifest = tmpl({
+      name: clusterName,
+      namespace,
+      clusterName,
     })
 
     return manifest

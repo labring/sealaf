@@ -1,9 +1,11 @@
 import { CreateDedicatedDatabaseDto } from '../../database/dto/create-dedicated-database.dto'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Length,
   ValidateNested,
@@ -51,6 +53,15 @@ export class UpdateApplicationStateDto {
   @IsIn(STATES)
   @IsNotEmpty()
   state: ApplicationState
+
+  @ApiProperty({
+    required: false,
+    description: 'Flag for runtime only operations',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  onlyRuntimeFlag?: boolean
 }
 
 export class UpdateApplicationBundleDto {
