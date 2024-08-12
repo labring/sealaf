@@ -582,10 +582,12 @@ export class InstanceService {
 
   private getRuntimeLabel(appid: string) {
     const SEALOS = 'cloud.sealos.io/app-deploy-manager'
+    const SEALAF_APP = 'sealaf-app'
     const labels: Record<string, string> = {
       [LABEL_KEY_APP_ID]: appid,
       [SEALOS]: this.getAppDeployName(appid),
       app: this.getAppDeployName(appid),
+      [SEALAF_APP]: appid,
     }
 
     return labels

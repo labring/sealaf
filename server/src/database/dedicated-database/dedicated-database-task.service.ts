@@ -188,7 +188,26 @@ export class DedicatedDatabaseTaskService {
     const manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     if (!manifest) {
-      throw new Error(`stop dedicated database ${appid} manifest not found`)
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid: data.appid,
+            phase: DedicatedDatabasePhase.Stopping,
+          },
+
+          {
+            $set: {
+              phase: DedicatedDatabasePhase.Stopped,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
+
+      this.logger.debug(`stop dedicated database ${appid} manifest not found`)
+
+      return
     }
 
     const stopped =

@@ -146,9 +146,11 @@ export class DedicatedDatabaseService {
     const requestMemory =
       limitMemory * (region.bundleConf?.memoryRequestLimitRatio || 0.5)
 
+    const label = appid
     const template = region.deployManifest.database
     const tmpl = _.template(template)
     const manifest = tmpl({
+      label,
       name,
       limitCPU,
       limitMemory,
@@ -167,6 +169,12 @@ export class DedicatedDatabaseService {
     appid: string,
   ): Promise<boolean> {
     const ddbDeployManifest = await this.getDeployManifest(region, user, appid)
+
+    if (!ddbDeployManifest) {
+      this.logger.debug(`restart ddb,  deploy manifest not found for ${appid}`)
+      return true
+    }
+
     const replicas = Number(ddbDeployManifest.spec.componentSpecs[0].replicas)
 
     const limitCPU = extractNumber(
