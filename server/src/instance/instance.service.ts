@@ -107,7 +107,7 @@ export class InstanceService {
     deployment.spec = await this.makeDeploymentSpec(
       app,
       deployment.spec.template.metadata.labels,
-      this.getRuntimeLabel(appid),
+      deployment.spec.template.metadata.labels,
     )
     const appsV1Api = this.cluster.makeAppsV1Api()
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
