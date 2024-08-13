@@ -242,11 +242,17 @@ export class InstanceService {
     // db connection uri
     let dbConnectionUri: string
     const dedicatedDatabase = await this.dedicatedDatabaseService.findOne(appid)
+
     if (dedicatedDatabase) {
-      dbConnectionUri = await this.dedicatedDatabaseService.getConnectionUri(
-        user,
-        dedicatedDatabase,
-      )
+      try {
+        dbConnectionUri = await this.dedicatedDatabaseService.getConnectionUri(
+          user,
+          dedicatedDatabase,
+        )
+      } catch (e) {
+        this.logger.debug(`get db connection uri failed: ${e.message}`)
+        dbConnectionUri = ''
+      }
     }
 
     const NODE_MODULES_PUSH_URL =
