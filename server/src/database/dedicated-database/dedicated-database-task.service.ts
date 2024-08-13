@@ -205,7 +205,9 @@ export class DedicatedDatabaseTaskService {
           },
         )
 
-      this.logger.debug(`stop dedicated database ${appid} manifest not found`)
+      this.logger.debug(
+        `update dedicated database ${appid} state to stopped,note: ddb manifest not found`,
+      )
 
       return
     }

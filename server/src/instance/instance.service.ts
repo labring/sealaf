@@ -249,11 +249,11 @@ export class InstanceService {
           user,
           dedicatedDatabase,
         )
-        assert(dbConnectionUri, `db connection uri for ${appid} is empty, !!!`)
       } catch (e) {
-        this.logger.debug(e)
-        this.logger.debug(`get db connection uri failed: ${e.message}`)
         dbConnectionUri = ''
+        this.logger.debug(
+          `get db connection uri for ${appid} failed: ${e}, maybe ddb cluster manifest have been deleted`,
+        )
       }
     }
 
