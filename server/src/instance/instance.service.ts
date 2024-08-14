@@ -107,7 +107,7 @@ export class InstanceService {
     deployment.spec = await this.makeDeploymentSpec(
       app,
       deployment.spec.template.metadata.labels,
-      this.getRuntimeLabel(appid),
+      deployment.spec.template.metadata.labels,
     )
     const appsV1Api = this.cluster.makeAppsV1Api()
     const deploymentResult = await appsV1Api.replaceNamespacedDeployment(
@@ -242,11 +242,19 @@ export class InstanceService {
     // db connection uri
     let dbConnectionUri: string
     const dedicatedDatabase = await this.dedicatedDatabaseService.findOne(appid)
+
     if (dedicatedDatabase) {
-      dbConnectionUri = await this.dedicatedDatabaseService.getConnectionUri(
-        user,
-        dedicatedDatabase,
-      )
+      try {
+        dbConnectionUri = await this.dedicatedDatabaseService.getConnectionUri(
+          user,
+          dedicatedDatabase,
+        )
+      } catch (e) {
+        dbConnectionUri = ''
+        this.logger.debug(
+          `get db connection uri for ${appid} failed: ${e}, maybe ddb cluster manifest have been deleted`,
+        )
+      }
     }
 
     const NODE_MODULES_PUSH_URL =
@@ -582,10 +590,12 @@ export class InstanceService {
 
   private getRuntimeLabel(appid: string) {
     const SEALOS = 'cloud.sealos.io/app-deploy-manager'
+    const SEALAF_APP = 'sealaf-app'
     const labels: Record<string, string> = {
       [LABEL_KEY_APP_ID]: appid,
       [SEALOS]: this.getAppDeployName(appid),
       app: this.getAppDeployName(appid),
+      [SEALAF_APP]: appid,
     }
 
     return labels
