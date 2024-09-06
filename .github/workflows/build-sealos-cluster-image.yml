@@ -60,7 +60,7 @@ jobs:
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/${{ env.image }}
           VERSION: ${{ env.tag }}
-        working-directory: build
+        working-directory: deploy
         run: |
           echo $IMAGE:$VERSION
           sudo sealos build -t $IMAGE:$VERSION-arm64 --platform linux/arm64 -f Kubefile  .
