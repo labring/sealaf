@@ -76,12 +76,12 @@ export default function MonitorBar() {
     setResources([
       {
         label: `CPU`,
-        percent: getAverage(instantData.cpu) * 100,
+        percent: getAverage(instantData.cpu),
         color: "#47C8BF",
       },
       {
         label: t("Spec.RAM"),
-        percent: getAverage(instantData.memory) * 100,
+        percent: getAverage(instantData.memory),
         color: "#8172D8",
       },
       {
