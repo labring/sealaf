@@ -118,7 +118,7 @@ export default function AreaCard(props: {
           const tempData = item.values.map((item) => {
             return {
               xData: modifyTimestamp(item[0]),
-              [`value${index}`]: Number((Number(item[1]) * maxValue).toFixed(2)),
+              [`value${index}`]: Number((Number(item[1]) * maxValue * 0.01).toFixed(2)),
             };
           });
           tempDataArray.push(tempData);
@@ -131,7 +131,7 @@ export default function AreaCard(props: {
       data[dataNumber - 1]?.values.map((item) => {
         return {
           xData: item[0] * 1000,
-          value0: Number((Number(item[1]) * maxValue).toFixed(2)),
+          value0: Number((Number(item[1]) * maxValue * 0.01).toFixed(2)),
         };
       }),
     );
