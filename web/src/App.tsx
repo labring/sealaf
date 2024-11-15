@@ -10,6 +10,7 @@ import { ClickToComponent } from "click-to-react-component";
 
 import "@/utils/i18n";
 
+import InitSealosApp from "./components/InitSealosApp";
 import UpgradePrompt from "./components/UpgradePrompt";
 import useSiteSettingStore from "./pages/siteSetting";
 import theme from "./chakraTheme";
@@ -70,6 +71,7 @@ function APP() {
         <ChakraProvider theme={colorMode === "light" ? theme : darkTheme}>
           <Global styles={GlobalStyles} />
           <UpgradePrompt />
+          <InitSealosApp />
           <BrowserRouter>
             <RouteElement />
           </BrowserRouter>
