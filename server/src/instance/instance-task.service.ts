@@ -17,6 +17,7 @@ import {
   DedicatedDatabasePhase,
   DedicatedDatabaseState,
 } from 'src/database/entities/dedicated-database'
+import { Setting, SettingKey } from 'src/setting/entities/setting'
 
 @Injectable()
 export class InstanceTaskService {
@@ -96,6 +97,11 @@ export class InstanceTaskService {
   async handleStartingPhase() {
     const db = SystemDatabase.db
 
+    const appCreateTimeConf = await db.collection<Setting>('Setting').findOne({
+      key: SettingKey.AppCreateTimeOut,
+      public: false,
+    })
+
     const res = await db
       .collection<Application>('Application')
       .findOneAndUpdate(
@@ -112,38 +118,42 @@ export class InstanceTaskService {
 
     const waitingTime = Date.now() - app.updatedAt.getTime()
     // if waiting time is more than 10 minutes, stop the application
-    if (waitingTime > 1000 * 60 * 10) {
-      await db.collection<Application>('Application').updateOne(
-        { appid: app.appid },
-        {
-          $set: {
-            state: ApplicationState.Stopped,
-            phase: ApplicationPhase.Stopping,
-            lockedAt: TASK_LOCK_INIT_TIME,
-            updatedAt: new Date(),
-          },
-        },
-      )
+    if (appCreateTimeConf?.value) {
+      const appCreateTimeOut = parseInt(appCreateTimeConf.value) * 60 * 1000
 
-      // if databse operation success but runtime failed
-      await db
-        .collection<DedicatedDatabase>('DedicatedDatabase')
-        .findOneAndUpdate(
-          {
-            appid: app.appid,
-            state: DedicatedDatabaseState.Running,
-            phase: DedicatedDatabasePhase.Started,
-          },
+      if (waitingTime > appCreateTimeOut) {
+        await db.collection<Application>('Application').updateOne(
+          { appid: app.appid },
           {
             $set: {
-              state: DedicatedDatabaseState.Stopped,
-              phase: DedicatedDatabasePhase.Stopping,
+              state: ApplicationState.Stopped,
+              phase: ApplicationPhase.Stopping,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
             },
           },
         )
 
-      this.logger.log(`${app.appid} updated to state Stopped due to timeout`)
-      return
+        // if databse operation success but runtime failed
+        await db
+          .collection<DedicatedDatabase>('DedicatedDatabase')
+          .findOneAndUpdate(
+            {
+              appid: app.appid,
+              state: DedicatedDatabaseState.Running,
+              phase: DedicatedDatabasePhase.Started,
+            },
+            {
+              $set: {
+                state: DedicatedDatabaseState.Stopped,
+                phase: DedicatedDatabasePhase.Stopping,
+              },
+            },
+          )
+
+        this.logger.log(`${app.appid} updated to state Stopped due to timeout`)
+        return
+      }
     }
 
     const appid = app.appid

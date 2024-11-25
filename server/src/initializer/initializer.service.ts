@@ -371,6 +371,12 @@ export class InitializerService {
         value: 'https://doc.laf.run/zh/',
         desc: 'laf doc site url',
       },
+      {
+        public: false,
+        key: SettingKey.AppCreateTimeOut,
+        value: '15',
+        desc: 'timeout for application creation in minutes',
+      },
     ])
 
     this.logger.verbose('Created default settings')
