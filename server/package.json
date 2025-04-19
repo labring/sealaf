@@ -9,7 +9,7 @@
     "intercept": "telepresence intercept laf-server -n laf-system -p 3000:3000 -e $(pwd)/.env",
     "leave": "telepresence leave laf-server-laf-system",
     "prebuild": "rimraf dist",
-    "build": "nest build",
+    "build": " nest build",
     "start": "nest start",
     "dev": "nest start --watch",
     "watch": "nest start --watch",
