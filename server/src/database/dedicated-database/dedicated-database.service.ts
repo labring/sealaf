@@ -285,7 +285,7 @@ export class DedicatedDatabaseService {
     const api = this.cluster.makeCoreV1Api()
     const namespace = user.namespace
     const name = getDedicatedDatabaseName(database.appid)
-    // kubeblock >= new secret name
+    // KubeBlocks v0.x+ uses new secret naming format
     const secretName = `${name}-mongodb-account-root`
     const srv = await api.readNamespacedSecret(secretName, namespace)
     if (!srv) return null
