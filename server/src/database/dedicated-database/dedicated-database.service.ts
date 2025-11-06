@@ -292,7 +292,7 @@ export class DedicatedDatabaseService {
 
     const username = Buffer.from(srv.body.data.username, 'base64').toString()
     const password = Buffer.from(srv.body.data.password, 'base64').toString()
-    // kubeblock new secret doesn't include host/port
+    // KubeBlocks' new secret format doesn't include host/port fields
     const host = `${name}-mongodb.${namespace}.svc`
     const port = 27017
 
