@@ -39,7 +39,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
+        uses: actions/cache@v4 # 更新到 v4,自动获取最新兼容版本
         with:
           path: web/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('web/package-lock.json') }}
