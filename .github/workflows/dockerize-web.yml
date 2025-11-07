@@ -105,8 +105,9 @@ jobs:
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64, linux/arm64
-          # PR 构建时输出到本地,不push
+          # PR 构建时只构建 amd64,main 分支构建多平台
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # PR 构建时加载到本地 Docker daemon
           load: ${{ github.event_name == 'pull_request' }}
 
       - name: Comment on PR
@@ -119,20 +120,21 @@ jobs:
             const buildSuccess = '${{ steps.docker-build.outcome }}' === 'success';
             const emoji = buildSuccess ? '✅' : '❌';
             const status = buildSuccess ? 'Success' : 'Failed';
+            const platforms = isPush ? 'linux/amd64, linux/arm64' : 'linux/amd64';
 
             let body = `## ${emoji} Sealaf Web Image Build ${status}\n\n`;
             body += `### Build Details\n\n`;
             body += `| Item | Value |\n`;
             body += `|------|-------|\n`;
             body += `| Build Status | ${buildSuccess ? '✅ Passed' : '❌ Failed'} |\n`;
-            body += `| Platforms | linux/amd64, linux/arm64 |\n`;
+            body += `| Platforms | ${platforms} |\n`;
             body += `| Push to Registry | ${isPush ? '✅ Yes' : '⚠️ No (PR build only)'} |\n`;
             body += `| Node Version | 18.x |\n`;
             body += `| Framework | Vite/React |\n\n`;
 
             if (buildSuccess && !isPush) {
               body += `### 📦 Image will be published after merge to main\n\n`;
-              body += `**Note**: PR builds only verify the Docker build process. Images are pushed only when merged to main.\n\n`;
+              body += `**Note**: PR builds only verify the Docker build process for linux/amd64. Multi-platform images (amd64 + arm64) are built and pushed only when merged to main.\n\n`;
             }
 
             if (buildSuccess && isPush) {
