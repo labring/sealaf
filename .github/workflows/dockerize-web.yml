@@ -23,6 +23,7 @@ permissions:
   pull-requests: write
   packages: write
   contents: read
+  issues: write # 添加这个权限以允许创建评论
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,7 +40,7 @@ jobs:
 
       - name: Cache node modules
         id: cache-node-modules
-        uses: actions/cache@v4 # 更新到 v4,自动获取最新兼容版本
+        uses: actions/cache@v4
         with:
           path: web/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('web/package-lock.json') }}
@@ -65,9 +66,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
+          # PR 构建时只用 GHCR,避免 DOCKER_USERNAME 为空的问题
           images: |
             ghcr.io/${{ github.repository_owner }}/sealaf-web
-            docker.io/${{ secrets.DOCKER_USERNAME }}/sealaf-web
+            ${{ github.event_name == 'push' && format('docker.io/{0}/sealaf-web', secrets.DOCKER_USERNAME) || '' }}
           tags: |
             type=ref,event=pr
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') && github.event_name == 'push' }}
@@ -108,6 +110,7 @@ jobs:
       - name: Comment on PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        continue-on-error: true # 如果评论失败也不中断 workflow
         with:
           script: |
             const isPush = '${{ github.event_name }}' === 'push';
@@ -143,31 +146,36 @@ jobs:
             body += `**Commit**: \`${{ github.sha }}\`\n`;
             body += `**Triggered by**: @${{ github.actor }}\n`;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('Sealaf Web Image Build')
-            );
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: body
               });
+
+              const botComment = comments.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('Sealaf Web Image Build')
+              );
+
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            } catch (error) {
+              console.log('Failed to post comment:', error.message);
+              console.log('This might be expected for PRs from forks');
             }
 
   trigger-workflow-build-cluster-image:
