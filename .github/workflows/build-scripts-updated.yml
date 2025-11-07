@@ -7,9 +7,13 @@ on:
       - main
     paths:
       - "build/**"
+      - "deploy/**"
       - ".github/workflows/build-scripts-updated.yml"
       - ".github/workflows/build-sealos-cluster-image.yml"
       - "!**/*.md"
+
+permissions:
+  contents: read
 
 concurrency:
   group: build-scripts-updated-${{ github.ref }}
@@ -19,8 +23,16 @@ jobs:
   trigger-workflow-build-cluster-image:
     runs-on: ubuntu-latest
     steps:
-      - name: trigger cluster image workflow
-        uses: peter-evans/repository-dispatch@v2
+      - name: Trigger cluster image rebuild
+        uses: peter-evans/repository-dispatch@v3
         with:
           event-type: build-scripts-updated
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "version": "latest"}'
+
+      - name: Log trigger event
+        run: |
+          echo "Triggered cluster image rebuild workflow"
+          echo "Event type: build-scripts-updated"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Version: latest"

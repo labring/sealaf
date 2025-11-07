@@ -67,6 +67,7 @@
     "immer",
     "Katex",
     "Kube",
+    "kubeblock",
     "kubeconfig",
     "Kubefile",
     "Kubernetes",

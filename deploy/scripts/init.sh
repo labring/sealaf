@@ -13,8 +13,8 @@ function gen_mongodbUri() {
     kubectl apply -f manifests/mongodb.yaml
     echo "waiting for mongodb secret generated"
     message="Waiting for MongoDB ready"
-    # if there is no sealos-mongodb-conn-credential secret then wait for mongodb ready
-    while [ -z "$(kubectl get secret -n $NAMESPACE sealaf-mongodb-conn-credential 2>/dev/null)" ]; do
+    # if there is no sealaf-mongodb-account-root secret then wait for mongodb ready
+    while [ -z "$(kubectl get secret -n $NAMESPACE sealaf-mongodb-account-root 2>/dev/null)" ]; do
       echo -ne "\r$message   \e[K"
       sleep 0.5
       echo -ne "\r$message .  \e[K"
