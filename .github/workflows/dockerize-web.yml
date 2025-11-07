@@ -23,7 +23,7 @@ permissions:
   pull-requests: write
   packages: write
   contents: read
-  issues: write # 添加这个权限以允许创建评论
+  issues: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -66,10 +66,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
-          # PR 构建时只用 GHCR,避免 DOCKER_USERNAME 为空的问题
+          # PR 构建时不设置 images,避免生成 registry 标签
           images: |
-            ghcr.io/${{ github.repository_owner }}/sealaf-web
-            ${{ github.event_name == 'push' && format('docker.io/{0}/sealaf-web', secrets.DOCKER_USERNAME) || '' }}
+            ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && format('ghcr.io/{0}/sealaf-web', github.repository_owner) || '' }}
+            ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && format('docker.io/{0}/sealaf-web', secrets.DOCKER_USERNAME) || '' }}
           tags: |
             type=ref,event=pr
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') && github.event_name == 'push' }}
@@ -106,11 +106,13 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64, linux/arm64
+          # PR 构建时输出到本地,不push
+          load: ${{ github.event_name == 'pull_request' }}
 
       - name: Comment on PR
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        continue-on-error: true # 如果评论失败也不中断 workflow
+        continue-on-error: true
         with:
           script: |
             const isPush = '${{ github.event_name }}' === 'push';
@@ -129,10 +131,8 @@ jobs:
             body += `| Framework | Vite/React |\n\n`;
 
             if (buildSuccess && !isPush) {
-              body += `### 📦 Image Tags (will be pushed after merge)\n\n`;
-              body += '```\n';
-              body += `${{ steps.meta.outputs.tags }}\n`;
-              body += '```\n\n';
+              body += `### 📦 Image will be published after merge to main\n\n`;
+              body += `**Note**: PR builds only verify the Docker build process. Images are pushed only when merged to main.\n\n`;
             }
 
             if (buildSuccess && isPush) {
