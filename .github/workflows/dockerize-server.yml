@@ -249,14 +249,3 @@ jobs:
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ghcr.io/${{ github.repository_owner }}/sealaf-server:${{ steps.meta.outputs.version }}
-
-  trigger-workflow-build-cluster-image:
-    needs: [release-server-images]
-    if: github.ref == format('refs/heads/{0}', 'main') && github.event_name == 'push'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: trigger cluster image workflow
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: docker_build_success
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "version": "latest"}'

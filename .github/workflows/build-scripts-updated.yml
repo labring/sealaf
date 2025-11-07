@@ -20,19 +20,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  trigger-workflow-build-cluster-image:
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger cluster image rebuild
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: build-scripts-updated
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "version": "latest"}'
-
-      - name: Log trigger event
+      - name: Log workflow completion
         run: |
-          echo "Triggered cluster image rebuild workflow"
-          echo "Event type: build-scripts-updated"
+          echo "Build scripts updated workflow completed"
+          echo "This will trigger build-sealos-cluster-image via workflow_run"
           echo "Ref: ${{ github.ref }}"
           echo "SHA: ${{ github.sha }}"
-          echo "Version: latest"

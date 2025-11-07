@@ -4,7 +4,7 @@ metadata:
   finalizers:
     - cluster.kubeblocks.io/finalizer
   labels:
-    kb.io/database: mongodb-8.0.4
+    kb.io/database: mongodb-5.0
     app.kubernetes.io/instance: <%- name %>
     helm.sh/chart: mongodb-cluster-0.9.1
     sealaf-app: <%- label %>
@@ -16,8 +16,6 @@ spec:
     tenancy: SharedNode
     topologyKeys:
       - kubernetes.io/hostname
-  clusterDefinitionRef: mongodb
-  clusterVersionRef: mongodb-5.0
   componentSpecs:
     - componentDef: mongodb
       monitor: true
@@ -31,7 +29,7 @@ spec:
           cpu: <%- requestCPU %>m
           memory: <%- requestMemory %>Mi
       serviceAccountName: <%- name %>
-      serviceVersion: 8.0.4
+      serviceVersion: 5.0
       volumeClaimTemplates:
         - name: data
           spec:
