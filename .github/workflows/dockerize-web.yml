@@ -112,9 +112,10 @@ jobs:
           file: ./web/Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/${{ matrix.arch }}
-          outputs: type=image,"name=ghcr.io/${{ github.repository_owner }}/sealaf-web${{ env.DOCKERHUB_USERNAME && format(',docker.io/{0}/sealaf-web', env.DOCKERHUB_USERNAME) || '' }}",name-canonical=true,push-by-digest=${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }},push=${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
-          # Load image to local Docker daemon for PR builds
+          # PR builds: load locally, Main builds: push by digest
+          push: false
           load: ${{ github.event_name == 'pull_request' }}
+          outputs: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && format('type=image,"name=ghcr.io/{0}/sealaf-web{1}",name-canonical=true,push-by-digest=true,push=true', github.repository_owner, env.DOCKERHUB_USERNAME && format(',docker.io/{0}/sealaf-web', env.DOCKERHUB_USERNAME) || '') || '' }}
 
       - name: Export digest
         if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
