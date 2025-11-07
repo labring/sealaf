@@ -5,7 +5,7 @@ metadata:
     - cluster.kubeblocks.io/finalizer
   generation: 1
   labels:
-    kb.io/database: mongodb-5.0
+    kb.io/database: mongodb-8.0.4
     app.kubernetes.io/instance: sealaf-mongodb
     helm.sh/chart: mongodb-cluster-0.9.1
   name: sealaf-mongodb
@@ -29,7 +29,7 @@ spec:
           cpu: "0.5"
           memory: 1Gi
       serviceAccountName: sealaf-mongodb
-      serviceVersion: 5.0
+      serviceVersion: 8.0.4
       volumeClaimTemplates:
         - name: data
           spec:
