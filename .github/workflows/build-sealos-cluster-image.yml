@@ -11,6 +11,7 @@ permissions:
 
 env:
   GO_VERSION: "1.19"
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
 concurrency:
   group: build-sealos-cluster-image-${{ github.ref }}
@@ -21,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.client_payload.ref }}
@@ -85,9 +86,10 @@ jobs:
           sudo buildah manifest push --all $IMAGE:$VERSION docker://$IMAGE:$VERSION
 
       - name: Push cluster image to docker.io
+        if: ${{ env.DOCKERHUB_USERNAME != '' }}
         env:
           GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/${{ env.image }}
-          IMAGE: docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.image }}
+          IMAGE: docker.io/${{ env.DOCKERHUB_USERNAME }}/${{ env.image }}
           VERSION: ${{ env.tag }}
         run: |
           sudo buildah login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }} docker.io
