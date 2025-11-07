@@ -1,9 +1,18 @@
 name: build-sealos-cluster-image
 
 on:
-  repository_dispatch:
-    types: [docker_build_success, build-scripts-updated]
+  # Triggered when dockerize-web, dockerize-server, or build-scripts-updated workflow completes on main branch
+  workflow_run:
+    workflows: ["dockerize-web", "dockerize-server", "build-scripts-updated", "release"]
+    types: [completed]
+    branches: [main]
+  # Manual trigger
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for cluster image'
+        required: false
+        default: 'latest'
 
 permissions:
   packages: write
@@ -20,20 +29,23 @@ concurrency:
 jobs:
   build_cluster_image:
     runs-on: ubuntu-latest
+    # Only run if the triggering workflow succeeded (or manual trigger)
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.client_payload.ref }}
 
       - name: Prepare
         id: prepare
         run: |
           IMAGE=sealaf
-          TAG=${{ github.event.client_payload.version }}
+          # Use custom version for workflow_dispatch, otherwise 'latest'
+          TAG=${{ github.event.inputs.version || 'latest' }}
           echo "tag=${TAG}" >> $GITHUB_ENV
           echo "image=${IMAGE}" >> $GITHUB_ENV
+          echo "Building cluster image: ${IMAGE}:${TAG}"
 
       - name: Remove builtin docker
         run: |

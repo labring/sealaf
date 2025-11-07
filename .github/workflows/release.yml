@@ -11,7 +11,6 @@ permissions:
   packages: write
 
 env:
-  GO_VERSION: "1.19"
   DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
 jobs:
@@ -168,8 +167,8 @@ jobs:
           echo "${{ steps.meta.outputs.tags }}"
           echo "Digest: ${{ steps.docker-build.outputs.digest }}"
 
-  trigger-workflow-build-cluster-image:
-    name: Trigger Cluster Image Build
+  notify-completion:
+    name: Notify Release Completion
     needs: [dockerize-server, dockerize-web]
     runs-on: ubuntu-latest
 
@@ -181,15 +180,10 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
-      - name: Trigger cluster image workflow
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: docker_build_success
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "version": "${{ steps.version.outputs.version }}"}'
-
-      - name: Log workflow trigger
+      - name: Log release completion
         run: |
-          echo "Triggered cluster image build workflow"
+          echo "Release workflow completed successfully"
+          echo "This will trigger build-sealos-cluster-image via workflow_run"
           echo "Version: ${{ steps.version.outputs.version }}"
           echo "Ref: ${{ github.ref }}"
           echo "SHA: ${{ github.sha }}"

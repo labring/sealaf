@@ -5,15 +5,19 @@ metadata:
     - cluster.kubeblocks.io/finalizer
   generation: 1
   labels:
-    clusterdefinition.kubeblocks.io/name: mongodb
-    clusterversion.kubeblocks.io/name: mongodb-5.0
+    kb.io/database: mongodb-5.0
+    app.kubernetes.io/instance: sealaf-mongodb
+    helm.sh/chart: mongodb-cluster-0.9.1
   name: sealaf-mongodb
   namespace: sealaf-system
 spec:
-  clusterDefinitionRef: mongodb
-  clusterVersionRef: mongodb-5.0
+  affinity:
+    podAntiAffinity: Preferred
+    tenancy: SharedNode
+    topologyKeys:
+      - kubernetes.io/hostname
   componentSpecs:
-    - componentDefRef: mongodb
+    - componentDef: mongodb
       monitor: true
       name: mongodb
       replicas: 1
@@ -25,6 +29,7 @@ spec:
           cpu: "0.5"
           memory: 1Gi
       serviceAccountName: sealaf-mongodb
+      serviceVersion: 5.0
       volumeClaimTemplates:
         - name: data
           spec:
