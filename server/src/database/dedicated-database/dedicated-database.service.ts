@@ -286,8 +286,30 @@ export class DedicatedDatabaseService {
     const namespace = user.namespace
     const name = getDedicatedDatabaseName(database.appid)
     // KubeBlocks v0.x+ uses new secret naming format
-    const secretName = `${name}-mongodb-account-root`
-    const srv = await api.readNamespacedSecret(secretName, namespace)
+    // Try ${name}-mongodb-account-root first, fallback to ${name}-conn-credential
+    let srv = null
+    try {
+      const secretName = `${name}-mongodb-account-root`
+      srv = await api.readNamespacedSecret(secretName, namespace)
+    } catch (error) {
+      // If first secret doesn't exist (404), try the fallback
+      if (error?.response?.statusCode === 404) {
+        try {
+          const secretName = `${name}-conn-credential`
+          srv = await api.readNamespacedSecret(secretName, namespace)
+        } catch (fallbackError) {
+          // Both secrets don't exist, return null
+          if (fallbackError?.response?.statusCode === 404) {
+            return null
+          }
+          // Re-throw if it's not a 404 error
+          throw fallbackError
+        }
+      } else {
+        // Re-throw if it's not a 404 error
+        throw error
+      }
+    }
     if (!srv) return null
 
     const username = Buffer.from(srv.body.data.username, 'base64').toString()
