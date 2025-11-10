@@ -201,6 +201,8 @@ export class ApplicationTaskService {
 
     await this.cloudbinService.deleteCloudBinBucket(appid)
 
+    // TODO: delete instance
+
     // update phase to `Deleted`
     await db.collection<Application>('Application').updateOne(
       { _id: app._id, phase: ApplicationPhase.Deleting },
