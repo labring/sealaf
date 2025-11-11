@@ -134,14 +134,11 @@ export class InstanceTaskService {
           },
         )
 
-        // if databse operation success but runtime failed
         await db
           .collection<DedicatedDatabase>('DedicatedDatabase')
           .findOneAndUpdate(
             {
               appid: app.appid,
-              state: DedicatedDatabaseState.Running,
-              phase: DedicatedDatabasePhase.Started,
             },
             {
               $set: {

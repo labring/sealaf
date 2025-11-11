@@ -50,6 +50,9 @@ export class DedicatedDatabaseTaskService {
     this.handleRunningState().catch((err) => {
       this.logger.error(err)
     })
+    this.handleUpdatingState().catch((err) => {
+      this.logger.error(err)
+    })
   }
 
   async handleStartingPhase() {
@@ -71,11 +74,12 @@ export class DedicatedDatabaseTaskService {
 
     const region = await this.regionService.findByAppId(appid)
     const user = await this.clusterService.getUserByAppid(appid)
-    let manifest = await this.dbService.getDeployManifest(region, user, appid)
+    const manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     const waitingTime = Date.now() - data.updatedAt.getTime()
 
-    if (!manifest || manifest.spec.componentSpecs[0].replicas === 0) {
+    // create dedicated database
+    if (!manifest) {
       try {
         await this.dbService.applyDeployManifest(region, user, appid)
       } catch (error) {
@@ -87,15 +91,76 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+    const isDeployManifestChanged =
+      await this.dbService.isDeployManifestChanged(region, user, appid)
 
-    manifest = await this.dbService.getDeployManifest(region, user, appid)
-    const unavailable = manifest?.status?.phase !== 'Running'
+    if (isDeployManifestChanged) {
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
+          },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Updating,
+              phase: DedicatedDatabasePhase.Starting,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
+      return
+    }
 
-    if (unavailable && !connectionOk) {
+    // start dedicated database
+    if (manifest.status?.phase !== 'Running') {
+      const OpsRequestManifest =
+        await this.dbService.getKubeBlockOpsRequestManifest(
+          region,
+          user,
+          appid,
+          'start',
+        )
+
+      if (OpsRequestManifest) {
+        return
+      }
+
+      try {
+        await this.dbService.applyKubeBlockOpsRequestManifest(
+          region,
+          user,
+          appid,
+          'start',
+        )
+      } catch (error) {
+        this.logger.error(
+          `apply dedicated database ops request start ${appid} yaml error:\n ${error.message}`,
+        )
+      }
+
       await this.relock(appid, waitingTime)
       return
     }
+
+    if (manifest.status?.phase !== 'Running') {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+    if (!connectionOk) {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    await this.dbService.deleteKubeBlockOpsManifest(
+      region,
+      user,
+      appid,
+      'start',
+    )
 
     await this.db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
       {
@@ -212,22 +277,45 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    const stopped =
-      manifest?.status?.phase === 'Stopped' &&
-      manifest.spec.componentSpecs[0].replicas === 0
-
     if (manifest.spec.componentSpecs[0].replicas !== 0) {
-      await this.dbService.applyDeployManifest(region, user, appid, {
-        replicas: 0,
-      })
+      const OpsRequestManifest =
+        await this.dbService.getKubeBlockOpsRequestManifest(
+          region,
+          user,
+          appid,
+          'stop',
+        )
+
+      if (OpsRequestManifest) {
+        return
+      }
+
+      try {
+        await this.dbService.applyKubeBlockOpsRequestManifest(
+          region,
+          user,
+          appid,
+          'stop',
+        )
+      } catch (error) {
+        this.logger.error(
+          `apply dedicated database ops request stop ${appid} yaml error:\n ${error.message}`,
+        )
+      }
+
       await this.relock(appid, waitingTime)
       return
     }
 
-    if (!stopped) {
+    if (
+      manifest.status?.phase !== 'Stopped' ||
+      manifest.spec.componentSpecs[0].replicas !== 0
+    ) {
       await this.relock(appid, waitingTime)
       return
     }
+
+    await this.dbService.deleteKubeBlockOpsManifest(region, user, appid, 'stop')
 
     await this.db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
       {
@@ -335,20 +423,21 @@ export class DedicatedDatabaseTaskService {
       await this.dbService.isDeployManifestChanged(region, user, appid)
 
     if (isDeployManifestChanged) {
-      await this.dbService.applyDeployManifest(region, user, appid)
-      await db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
-        {
-          appid: appid,
-        },
-        {
-          $set: {
-            state: DedicatedDatabaseState.Running,
-            phase: DedicatedDatabasePhase.Starting,
-            lockedAt: TASK_LOCK_INIT_TIME,
-            updatedAt: new Date(),
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
           },
-        },
-      )
+          {
+            $set: {
+              state: DedicatedDatabaseState.Updating,
+              phase: DedicatedDatabasePhase.Started,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
       return
     }
 
@@ -361,6 +450,7 @@ export class DedicatedDatabaseTaskService {
           region,
           user,
           appid,
+          'restart',
         )
       } catch (error) {
         this.logger.error(
@@ -387,7 +477,12 @@ export class DedicatedDatabaseTaskService {
       OpsRequestManifest?.status?.phase === 'Succeed'
 
     if (isRestartSuccessful) {
-      await this.dbService.deleteKubeBlockOpsManifest(region, user, appid)
+      await this.dbService.deleteKubeBlockOpsManifest(
+        region,
+        user,
+        appid,
+        'restart',
+      )
       await db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
         {
           appid: appid,
@@ -402,6 +497,75 @@ export class DedicatedDatabaseTaskService {
         },
       )
     }
+  }
+
+  async handleUpdatingState() {
+    const res = await this.db
+      .collection<DedicatedDatabase>('DedicatedDatabase')
+      .findOneAndUpdate(
+        {
+          state: DedicatedDatabaseState.Updating,
+          phase: {
+            $in: [
+              DedicatedDatabasePhase.Started,
+              DedicatedDatabasePhase.Starting,
+            ],
+          },
+          lockedAt: { $lt: new Date(Date.now() - this.lockTimeout * 1000) },
+        },
+        { $set: { lockedAt: new Date() } },
+        { sort: { lockedAt: 1, updatedAt: 1 }, returnDocument: 'after' },
+      )
+
+    if (!res.value) return
+    const data = res.value
+    const appid = data.appid
+
+    const region = await this.regionService.findByAppId(appid)
+    const user = await this.clusterService.getUserByAppid(appid)
+    const manifest = await this.dbService.getDeployManifest(region, user, appid)
+
+    const waitingTime = Date.now() - data.updatedAt.getTime()
+
+    if (!manifest) {
+      this.logger.warn(`Deploy manifest not found for ${appid}, skip update`)
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    const isDeployManifestChanged =
+      await this.dbService.isDeployManifestChanged(region, user, appid)
+
+    if (isDeployManifestChanged) {
+      await this.dbService.updateDeployManifest(region, user, appid)
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    if (manifest.status?.phase !== 'Running') {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+    if (!connectionOk) {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    await this.db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
+      {
+        appid,
+      },
+      {
+        $set: {
+          state: DedicatedDatabaseState.Running,
+          phase: DedicatedDatabasePhase.Started,
+          lockedAt: TASK_LOCK_INIT_TIME,
+          updatedAt: new Date(),
+        },
+      },
+    )
   }
 
   /**
