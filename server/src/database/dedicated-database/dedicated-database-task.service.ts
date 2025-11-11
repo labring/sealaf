@@ -299,7 +299,7 @@ export class DedicatedDatabaseTaskService {
         )
       } catch (error) {
         this.logger.error(
-          `apply dedicated database ops request start ${appid} yaml error:\n ${error.message}`,
+          `apply dedicated database ops request stop ${appid} yaml error:\n ${error.message}`,
         )
       }
 
