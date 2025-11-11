@@ -399,12 +399,15 @@ export class DedicatedDatabaseService {
       case 'restart':
         template = region.deployManifest.databaseOpsRequestRestart
         name = `${clusterName}-restart`
+        break;
       case 'stop':
         template = region.deployManifest.databaseOpsRequestStop
         name = `${clusterName}-stop`
+        break;
       case 'start':
         template = region.deployManifest.databaseOpsRequestStart
         name = `${clusterName}-start`
+        break;
     }
 
     const tmpl = _.template(template)
