@@ -399,15 +399,19 @@ export class DedicatedDatabaseService {
       case 'restart':
         template = region.deployManifest.databaseOpsRequestRestart
         name = `${clusterName}-restart`
-        break;
+        break
       case 'stop':
         template = region.deployManifest.databaseOpsRequestStop
         name = `${clusterName}-stop`
-        break;
+        break
       case 'start':
         template = region.deployManifest.databaseOpsRequestStart
         name = `${clusterName}-start`
-        break;
+        break
+      default:
+        // This should never happen due to TypeScript type checking,
+        // but provides runtime safety
+        throw new Error(`Unknown ops request type: ${type}`)
     }
 
     const tmpl = _.template(template)
