@@ -203,6 +203,7 @@ export class ApplicationTaskService {
 
     await this.cloudbinService.deleteCloudBinBucket(appid)
 
+    // delete instance
     const instance = await this.instanceService.get(app.appid)
     if (instance.deployment) {
       await this.instanceService.remove(app.appid)
