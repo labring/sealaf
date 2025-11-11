@@ -205,7 +205,7 @@ export class ApplicationTaskService {
 
     // delete instance
     const instance = await this.instanceService.get(app.appid)
-    if (instance.deployment) {
+    if (instance && instance.deployment) {
       await this.instanceService.remove(app.appid)
       await this.unlock(appid)
       return
