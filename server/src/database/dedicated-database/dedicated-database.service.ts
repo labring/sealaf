@@ -394,19 +394,23 @@ export class DedicatedDatabaseService {
     const namespace = user.namespace
 
     let template: string
+    let name: string
     switch (type) {
       case 'restart':
         template = region.deployManifest.databaseOpsRequestRestart
+        name = `${clusterName}-restart`
       case 'stop':
         template = region.deployManifest.databaseOpsRequestStop
+        name = `${clusterName}-stop`
       case 'start':
         template = region.deployManifest.databaseOpsRequestStart
+        name = `${clusterName}-start`
     }
 
     const tmpl = _.template(template)
 
     const manifest = tmpl({
-      name: clusterName,
+      name,
       namespace,
       clusterName,
     })
