@@ -539,36 +539,55 @@ export class DedicatedDatabaseTaskService {
     const isDeployManifestChanged =
       await this.dbService.isDeployManifestChanged(region, user, appid)
 
-    if (isDeployManifestChanged) {
-      await this.dbService.updateDeployManifest(region, user, appid)
+    if (!isDeployManifestChanged) {
+      this.logger.warn(`Deploy manifest not changed for ${appid}, skip update`)
       await this.relock(appid, waitingTime)
       return
     }
 
-    if (manifest.status?.phase !== 'Running') {
+    await this.dbService.updateDeployManifest(region, user, appid)
+
+    if (res.value.phase === DedicatedDatabasePhase.Starting) {
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
+          },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Running,
+              phase: DedicatedDatabasePhase.Starting,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
+
       await this.relock(appid, waitingTime)
       return
     }
 
-    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
-    if (!connectionOk) {
+    if (res.value.phase === DedicatedDatabasePhase.Started) {
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
+          },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Restarting,
+              phase: DedicatedDatabasePhase.Started,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
+
       await this.relock(appid, waitingTime)
       return
     }
-
-    await this.db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
-      {
-        appid,
-      },
-      {
-        $set: {
-          state: DedicatedDatabaseState.Running,
-          phase: DedicatedDatabasePhase.Started,
-          lockedAt: TASK_LOCK_INIT_TIME,
-          updatedAt: new Date(),
-        },
-      },
-    )
   }
 
   /**
