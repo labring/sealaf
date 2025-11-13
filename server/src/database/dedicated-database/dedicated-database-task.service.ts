@@ -532,6 +532,25 @@ export class DedicatedDatabaseTaskService {
 
     if (!manifest) {
       this.logger.warn(`Deploy manifest not found for ${appid}, skip update`)
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
+          },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Stopped,
+              phase: DedicatedDatabasePhase.Stopped,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
+      return
+    }
+
+    if (manifest.status?.phase === 'Updating') {
       await this.relock(appid, waitingTime)
       return
     }
@@ -539,13 +558,11 @@ export class DedicatedDatabaseTaskService {
     const isDeployManifestChanged =
       await this.dbService.isDeployManifestChanged(region, user, appid)
 
-    if (!isDeployManifestChanged) {
-      this.logger.warn(`Deploy manifest not changed for ${appid}, skip update`)
+    if (isDeployManifestChanged) {
+      await this.dbService.updateDeployManifest(region, user, appid)
       await this.relock(appid, waitingTime)
       return
     }
-
-    await this.dbService.updateDeployManifest(region, user, appid)
 
     if (res.value.phase === DedicatedDatabasePhase.Starting) {
       await this.db
@@ -563,12 +580,19 @@ export class DedicatedDatabaseTaskService {
             },
           },
         )
-
-      await this.relock(appid, waitingTime)
       return
-    }
+    } else if (res.value.phase === DedicatedDatabasePhase.Started) {
+      if (manifest.status?.phase !== 'Running') {
+        await this.relock(appid, waitingTime)
+        return
+      }
 
-    if (res.value.phase === DedicatedDatabasePhase.Started) {
+      const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+      if (!connectionOk) {
+        await this.relock(appid, waitingTime)
+        return
+      }
+
       await this.db
         .collection<DedicatedDatabase>('DedicatedDatabase')
         .updateOne(
@@ -577,15 +601,13 @@ export class DedicatedDatabaseTaskService {
           },
           {
             $set: {
-              state: DedicatedDatabaseState.Restarting,
+              state: DedicatedDatabaseState.Running,
               phase: DedicatedDatabasePhase.Started,
               lockedAt: TASK_LOCK_INIT_TIME,
               updatedAt: new Date(),
             },
           },
         )
-
-      await this.relock(appid, waitingTime)
       return
     }
   }
