@@ -96,28 +96,6 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    const isDeployManifestChanged =
-      await this.dbService.isDeployManifestChanged(region, user, appid)
-
-    if (isDeployManifestChanged) {
-      await this.db
-        .collection<DedicatedDatabase>('DedicatedDatabase')
-        .updateOne(
-          {
-            appid,
-          },
-          {
-            $set: {
-              state: DedicatedDatabaseState.Updating,
-              phase: DedicatedDatabasePhase.Starting,
-              lockedAt: TASK_LOCK_INIT_TIME,
-              updatedAt: new Date(),
-            },
-          },
-        )
-      return
-    }
-
     // start dedicated database
     if (manifest.status?.phase !== 'Running') {
       const OpsRequestManifest =
@@ -508,12 +486,7 @@ export class DedicatedDatabaseTaskService {
       .findOneAndUpdate(
         {
           state: DedicatedDatabaseState.Updating,
-          phase: {
-            $in: [
-              DedicatedDatabasePhase.Started,
-              DedicatedDatabasePhase.Starting,
-            ],
-          },
+          phase: DedicatedDatabasePhase.Started,
           lockedAt: { $lt: new Date(Date.now() - this.lockTimeout * 1000) },
         },
         { $set: { lockedAt: new Date() } },
@@ -564,52 +537,50 @@ export class DedicatedDatabaseTaskService {
       return
     }
 
-    if (res.value.phase === DedicatedDatabasePhase.Starting) {
-      await this.db
-        .collection<DedicatedDatabase>('DedicatedDatabase')
-        .updateOne(
-          {
-            appid,
-          },
-          {
-            $set: {
-              state: DedicatedDatabaseState.Running,
-              phase: DedicatedDatabasePhase.Starting,
-              lockedAt: TASK_LOCK_INIT_TIME,
-              updatedAt: new Date(),
-            },
-          },
-        )
-      return
-    } else if (res.value.phase === DedicatedDatabasePhase.Started) {
-      if (manifest.status?.phase !== 'Running') {
-        await this.relock(appid, waitingTime)
-        return
-      }
-
-      const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
-      if (!connectionOk) {
-        await this.relock(appid, waitingTime)
-        return
-      }
-
-      await this.db
-        .collection<DedicatedDatabase>('DedicatedDatabase')
-        .updateOne(
-          {
-            appid,
-          },
-          {
-            $set: {
-              state: DedicatedDatabaseState.Running,
-              phase: DedicatedDatabasePhase.Started,
-              lockedAt: TASK_LOCK_INIT_TIME,
-              updatedAt: new Date(),
-            },
-          },
-        )
+    if (manifest.status?.phase !== 'Running') {
+      await this.relock(appid, waitingTime)
       return
     }
+
+    const connectionOk = await this.dbService.databaseConnectionIsOk(appid)
+    if (!connectionOk) {
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    await this.dbService.deleteKubeBlockOpsManifestForSpec(
+      region,
+      user,
+      appid,
+      'verticalScaling',
+    )
+    await this.dbService.deleteKubeBlockOpsManifestForSpec(
+      region,
+      user,
+      appid,
+      'horizontalScaling',
+    )
+    await this.dbService.deleteKubeBlockOpsManifestForSpec(
+      region,
+      user,
+      appid,
+      'volumeExpansion',
+    )
+
+    await this.db.collection<DedicatedDatabase>('DedicatedDatabase').updateOne(
+      {
+        appid,
+      },
+      {
+        $set: {
+          state: DedicatedDatabaseState.Running,
+          phase: DedicatedDatabasePhase.Started,
+          lockedAt: TASK_LOCK_INIT_TIME,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return
   }
 
   /**

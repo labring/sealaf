@@ -9,12 +9,7 @@ import {
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import * as _ from 'lodash'
 import { SystemDatabase } from 'src/system-database'
-import {
-  KubernetesObject,
-  loadAllYaml,
-  PatchUtils,
-} from '@kubernetes/client-node'
-import { GroupVersionKind } from 'src/region/cluster/types'
+import { KubernetesObject, loadAllYaml } from '@kubernetes/client-node'
 import {
   CN_PUBLISHED_CONF,
   CN_PUBLISHED_FUNCTIONS,
@@ -90,101 +85,139 @@ export class DedicatedDatabaseService {
       return null
     }
 
-    const requestCPU =
-      spec.limitCPU * (region.bundleConf?.cpuRequestLimitRatio || 0.1)
-    const requestMemory =
-      spec.limitMemory * (region.bundleConf?.memoryRequestLimitRatio || 0.5)
-
     const componentSpec = manifest.spec.componentSpecs[0]
 
-    // Build JSON Patch operations for only the fields we want to update
-    const patchOperations: Array<{
-      op: 'replace' | 'add'
-      path: string
-      value: any
-    }> = []
+    // Extract current values from manifest
+    const currentReplicas = Number(componentSpec.replicas)
+    const currentLimitCPU = extractNumber(componentSpec.resources?.limits?.cpu)
+    const currentLimitMemory = extractNumber(
+      componentSpec.resources?.limits?.memory,
+    )
+    const currentCapacity = extractNumber(
+      componentSpec.volumeClaimTemplates?.[0]?.spec?.resources?.requests
+        ?.storage,
+    )
 
-    // Update replicas
-    patchOperations.push({
-      op: 'replace',
-      path: '/spec/componentSpecs/0/replicas',
-      value: spec.replicas,
-    })
+    // Detect what has changed (using same comparison logic as isDeployManifestChanged)
+    const isLimitCpuMatch =
+      spec.limitCPU === currentLimitCPU ||
+      spec.limitCPU / 1000 === currentLimitCPU
+    const isLimitMemoryMatch =
+      spec.limitMemory === currentLimitMemory ||
+      spec.limitMemory / 1024 === currentLimitMemory
+    const isCapacityMatch =
+      spec.capacity === currentCapacity ||
+      spec.capacity / 1024 === currentCapacity
+    const isReplicasMatch = spec.replicas === currentReplicas
 
-    // Update resources limits (only if they exist)
-    if (componentSpec.resources?.limits) {
-      patchOperations.push({
-        op: 'replace',
-        path: '/spec/componentSpecs/0/resources/limits/cpu',
-        value: `${spec.limitCPU}m`,
-      })
-      patchOperations.push({
-        op: 'replace',
-        path: '/spec/componentSpecs/0/resources/limits/memory',
-        value: `${spec.limitMemory}Mi`,
-      })
+    const cpuOrMemoryChanged = !isLimitCpuMatch || !isLimitMemoryMatch
+    const replicasChanged = !isReplicasMatch
+    const capacityChanged = !isCapacityMatch
+
+    const results: any[] = []
+
+    // Apply verticalScaling if CPU or memory changed
+    if (cpuOrMemoryChanged) {
+      try {
+        const OpsRequestManifest =
+          await this.getKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            'verticalScaling',
+          )
+        if (!OpsRequestManifest) {
+          const result = await this.applyKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            spec,
+            'verticalScaling',
+          )
+          results.push(result)
+          this.logger.log(
+            `Applied verticalScaling ops request for ${appid}: limitCPU=${spec.limitCPU}m, limitMemory=${spec.limitMemory}Mi`,
+          )
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to apply verticalScaling ops request for ${appid}: ${error.message}`,
+          error,
+        )
+      }
     }
 
-    // Update resources requests (only if they exist)
-    if (componentSpec.resources?.requests) {
-      patchOperations.push({
-        op: 'replace',
-        path: '/spec/componentSpecs/0/resources/requests/cpu',
-        value: `${Math.round(requestCPU)}m`,
-      })
-      patchOperations.push({
-        op: 'replace',
-        path: '/spec/componentSpecs/0/resources/requests/memory',
-        value: `${Math.round(requestMemory)}Mi`,
-      })
+    // Apply horizontalScaling if replicas changed
+    if (replicasChanged) {
+      try {
+        const OpsRequestManifest =
+          await this.getKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            'horizontalScaling',
+          )
+        if (!OpsRequestManifest) {
+          const result = await this.applyKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            spec,
+            'horizontalScaling',
+          )
+          results.push(result)
+          this.logger.log(
+            `Applied horizontalScaling ops request for ${appid}: replicas=${spec.replicas}`,
+          )
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to apply horizontalScaling ops request for ${appid}: ${error.message}`,
+          error,
+        )
+      }
     }
 
-    // Update volumeClaimTemplates capacity (only if it exists)
-    if (componentSpec.volumeClaimTemplates?.[0]?.spec?.resources?.requests) {
-      patchOperations.push({
-        op: 'replace',
-        path: '/spec/componentSpecs/0/volumeClaimTemplates/0/spec/resources/requests/storage',
-        value: `${spec.capacity / 1024}Gi`,
-      })
+    // Apply volumeExpansion if capacity changed
+    if (capacityChanged) {
+      try {
+        const OpsRequestManifest =
+          await this.getKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            'volumeExpansion',
+          )
+        if (!OpsRequestManifest) {
+          const result = await this.applyKubeBlockOpsRequestManifestForSpec(
+            region,
+            user,
+            appid,
+            spec,
+            'volumeExpansion',
+          )
+          results.push(result)
+          this.logger.log(
+            `Applied volumeExpansion ops request for ${appid}: capacity=${
+              spec.capacity / 1024
+            }Gi`,
+          )
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to apply volumeExpansion ops request for ${appid}: ${error.message}`,
+          error,
+        )
+      }
     }
 
-    // Apply patch using customObjectsApi
-    const gvk = GroupVersionKind.fromKubernetesObject(manifest)
-    const customObjectsApi = this.cluster.makeCustomObjectApi()
-    try {
-      const response = await customObjectsApi.patchNamespacedCustomObject(
-        gvk.group,
-        gvk.version,
-        manifest.metadata.namespace,
-        gvk.plural,
-        manifest.metadata.name,
-        patchOperations,
-        undefined,
-        undefined,
-        undefined,
-        {
-          headers: {
-            'Content-Type': PatchUtils.PATCH_FORMAT_JSON_PATCH,
-          },
-        },
-      )
-
-      this.logger.log(
-        `Updated deploy manifest for ${appid}: replicas=${
-          spec.replicas
-        }, limitCPU=${spec.limitCPU}m, limitMemory=${
-          spec.limitMemory
-        }Mi, capacity=${spec.capacity / 1024}Gi`,
-      )
-
-      return response.body
-    } catch (error) {
-      this.logger.error(
-        `Failed to update deploy manifest for ${appid}: ${error.message}`,
-        error,
-      )
+    // If nothing changed, return null
+    if (!cpuOrMemoryChanged && !replicasChanged && !capacityChanged) {
+      this.logger.debug(`No changes detected for ${appid}, skip update`)
       return null
     }
+
+    return results.length === 1 ? results[0] : results
   }
 
   async getDedicatedDatabaseSpec(
@@ -338,6 +371,24 @@ export class DedicatedDatabaseService {
     return res
   }
 
+  async applyKubeBlockOpsRequestManifestForSpec(
+    region: Region,
+    user: User,
+    appid: string,
+    spec: DedicatedDatabaseSpec,
+    type: 'verticalScaling' | 'horizontalScaling' | 'volumeExpansion',
+  ) {
+    const manifest = this.makeKubeBlockOpsRequestManifestForSpec(
+      region,
+      user,
+      appid,
+      spec,
+      type,
+    )
+    const res = await this.cluster.applyYamlString(manifest, user.namespace)
+    return res
+  }
+
   async deleteKubeBlockOpsManifest(
     region: Region,
     user: User,
@@ -345,6 +396,25 @@ export class DedicatedDatabaseService {
     type: 'restart' | 'stop' | 'start' = 'restart',
   ) {
     const manifest = await this.getKubeBlockOpsRequestManifest(
+      region,
+      user,
+      appid,
+      type,
+    )
+    if (!manifest) {
+      return
+    }
+    const res = await this.cluster.deleteCustomObject(manifest)
+    return res
+  }
+
+  async deleteKubeBlockOpsManifestForSpec(
+    region: Region,
+    user: User,
+    appid: string,
+    type: 'verticalScaling' | 'horizontalScaling' | 'volumeExpansion',
+  ) {
+    const manifest = await this.getKubeBlockOpsRequestManifestForSpec(
       region,
       user,
       appid,
@@ -378,6 +448,35 @@ export class DedicatedDatabaseService {
     const spec = specs[0]
     try {
       const manifest = await api.read(spec)
+      return manifest.body as KubernetesObject & { spec: any; status: any }
+    } catch (err) {
+      return null
+    }
+  }
+
+  async getKubeBlockOpsRequestManifestForSpec(
+    region: Region,
+    user: User,
+    appid: string,
+    type: 'verticalScaling' | 'horizontalScaling' | 'volumeExpansion',
+  ) {
+    const spec = await this.getDedicatedDatabaseSpec(appid)
+    const api = this.cluster.makeObjectApi()
+    const emptyManifest = this.makeKubeBlockOpsRequestManifestForSpec(
+      region,
+      user,
+      appid,
+      spec,
+      type,
+    )
+    const specs = loadAllYaml(emptyManifest)
+    assert(
+      specs && specs.length > 0,
+      'the OpsRequest manifest of database should not be empty',
+    )
+    const specObj = specs[0]
+    try {
+      const manifest = await api.read(specObj)
       return manifest.body as KubernetesObject & { spec: any; status: any }
     } catch (err) {
       return null
@@ -420,6 +519,61 @@ export class DedicatedDatabaseService {
       name,
       namespace,
       clusterName,
+    })
+
+    return manifest
+  }
+
+  makeKubeBlockOpsRequestManifestForSpec(
+    region: Region,
+    user: User,
+    appid: string,
+    spec: DedicatedDatabaseSpec,
+    type: 'verticalScaling' | 'horizontalScaling' | 'volumeExpansion',
+  ) {
+    const clusterName = getDedicatedDatabaseName(appid)
+    const namespace = user.namespace
+
+    let template: string
+    let name: string
+    switch (type) {
+      case 'verticalScaling':
+        template = region.deployManifest.databaseOpsRequestVerticalScaling
+        name = `${clusterName}-vertical-scaling`
+        break
+      case 'horizontalScaling':
+        template = region.deployManifest.databaseOpsRequestHorizontalScaling
+        name = `${clusterName}-horizontal-scaling`
+        break
+      case 'volumeExpansion':
+        template = region.deployManifest.databaseOpsRequestVolumeExpansion
+        name = `${clusterName}-volume-expansion`
+        break
+      default:
+        // This should never happen due to TypeScript type checking,
+        // but provides runtime safety
+        throw new Error(`Unknown ops request type: ${type}`)
+    }
+
+    const { limitCPU, limitMemory, replicas, capacity } = spec
+
+    const requestCPU =
+      limitCPU * (region.bundleConf?.cpuRequestLimitRatio || 0.1)
+    const requestMemory =
+      limitMemory * (region.bundleConf?.memoryRequestLimitRatio || 0.5)
+
+    const tmpl = _.template(template)
+
+    const manifest = tmpl({
+      name,
+      namespace,
+      clusterName,
+      limitCPU,
+      limitMemory,
+      requestCPU,
+      requestMemory,
+      capacity: capacity / 1024,
+      replicas,
     })
 
     return manifest

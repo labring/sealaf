@@ -53,7 +53,10 @@ import { BindCustomDomainDto } from './dto/bind-custom-domain.dto'
 import { ClusterService } from 'src/region/cluster/cluster.service'
 import { SealosManagerGuard } from 'src/authentication/sealos-manager.guard'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
-import { DedicatedDatabaseState } from 'src/database/entities/dedicated-database'
+import {
+  DedicatedDatabasePhase,
+  DedicatedDatabaseState,
+} from 'src/database/entities/dedicated-database'
 
 @ApiTags('Application')
 @Controller('applications')
@@ -320,6 +323,35 @@ export class ApplicationController {
     const checkSpec = await this.checkResourceSpecification(dto, regionId, app)
     if (!checkSpec) {
       return ResponseUtil.error('invalid resource specification')
+    }
+
+    // Check if user is trying to change database resources
+    const isTryingToChangeDatabase =
+      (dto.dedicatedDatabase?.cpu !== undefined &&
+        dto.dedicatedDatabase?.cpu !==
+          origin.resource.dedicatedDatabase?.limitCPU) ||
+      (dto.dedicatedDatabase?.memory !== undefined &&
+        dto.dedicatedDatabase?.memory !==
+          origin.resource.dedicatedDatabase?.limitMemory) ||
+      (dto.dedicatedDatabase?.replicas !== undefined &&
+        dto.dedicatedDatabase?.replicas !==
+          origin.resource.dedicatedDatabase?.replicas) ||
+      (dto.dedicatedDatabase?.capacity !== undefined &&
+        dto.dedicatedDatabase?.capacity !==
+          origin.resource.dedicatedDatabase?.capacity)
+
+    if (isTryingToChangeDatabase) {
+      // Check database state before allowing resource changes
+      const dedicatedDatabase = await this.dedicateDatabase.findOne(appid)
+      if (
+        dedicatedDatabase &&
+        (dedicatedDatabase.state !== DedicatedDatabaseState.Running ||
+          dedicatedDatabase.phase !== DedicatedDatabasePhase.Started)
+      ) {
+        return ResponseUtil.error(
+          'Database is not in running state, cannot change database resources',
+        )
+      }
     }
 
     if (
