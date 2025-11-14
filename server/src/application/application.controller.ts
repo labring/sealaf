@@ -229,8 +229,10 @@ export class ApplicationController {
     // check: only running application can restart
     if (
       dto.state === ApplicationState.Restarting &&
-      app.state !== ApplicationState.Running &&
-      app.phase !== ApplicationPhase.Started
+      !(
+        app.state === ApplicationState.Running &&
+        app.phase === ApplicationPhase.Started
+      )
     ) {
       return ResponseUtil.error(
         'The application is not running, can not restart it',
@@ -284,13 +286,10 @@ export class ApplicationController {
     @Body() dto: UpdateApplicationBundleDto,
     @InjectApplication() app: ApplicationWithRelations,
   ) {
-    // only running and stopped application can update bundle
-    if (
-      app.phase !== ApplicationPhase.Started &&
-      app.phase !== ApplicationPhase.Stopped
-    ) {
+    // only running application can update bundle
+    if (app.phase !== ApplicationPhase.Started) {
       return ResponseUtil.error(
-        'The application is not running or stopped, can not update bundle',
+        'The application is not running, can not update bundle',
       )
     }
 
@@ -341,12 +340,16 @@ export class ApplicationController {
           origin.resource.dedicatedDatabase?.capacity)
 
     if (isTryingToChangeDatabase) {
-      // Check database state before allowing resource changes
+      // Database must be running to change database resources
       const dedicatedDatabase = await this.dedicateDatabase.findOne(appid)
+      if (!dedicatedDatabase) {
+        return ResponseUtil.error(
+          'Database not found, cannot change database resources',
+        )
+      }
       if (
-        dedicatedDatabase &&
-        (dedicatedDatabase.state !== DedicatedDatabaseState.Running ||
-          dedicatedDatabase.phase !== DedicatedDatabasePhase.Started)
+        dedicatedDatabase.state !== DedicatedDatabaseState.Running ||
+        dedicatedDatabase.phase !== DedicatedDatabasePhase.Started
       ) {
         return ResponseUtil.error(
           'Database is not in running state, cannot change database resources',

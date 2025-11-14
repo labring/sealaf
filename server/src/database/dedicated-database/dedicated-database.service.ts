@@ -31,6 +31,7 @@ import {
   DatabaseSyncState,
 } from '../entities/database-sync-record'
 import { extractNumber } from 'src/utils/number'
+import { formatK8sErrorAsJson } from 'src/utils/k8s-error'
 
 const getDedicatedDatabaseName = (appid: string) => `sealaf-${appid}`
 const p_exec = promisify(exec)
@@ -141,8 +142,9 @@ export class DedicatedDatabaseService {
         }
       } catch (error) {
         this.logger.error(
-          `Failed to apply verticalScaling ops request for ${appid}: ${error.message}`,
-          error,
+          `Failed to apply verticalScaling ops request for ${appid}:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
     }
@@ -172,8 +174,9 @@ export class DedicatedDatabaseService {
         }
       } catch (error) {
         this.logger.error(
-          `Failed to apply horizontalScaling ops request for ${appid}: ${error.message}`,
-          error,
+          `Failed to apply horizontalScaling ops request for ${appid}:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
     }
@@ -205,8 +208,9 @@ export class DedicatedDatabaseService {
         }
       } catch (error) {
         this.logger.error(
-          `Failed to apply volumeExpansion ops request for ${appid}: ${error.message}`,
-          error,
+          `Failed to apply volumeExpansion ops request for ${appid}:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
     }

@@ -17,7 +17,6 @@ import {
 import { DomainPhase } from 'src/gateway/entities/runtime-domain'
 import { DedicatedDatabaseService } from 'src/database/dedicated-database/dedicated-database.service'
 import { CloudBinBucketService } from 'src/storage/cloud-bin-bucket.service'
-import { InstanceService } from 'src/instance/instance.service'
 
 @Injectable()
 export class ApplicationTaskService {
@@ -33,7 +32,6 @@ export class ApplicationTaskService {
     private readonly configurationService: ApplicationConfigurationService,
     private readonly bundleService: BundleService,
     private readonly cloudbinService: CloudBinBucketService,
-    private readonly instanceService: InstanceService,
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -202,14 +200,6 @@ export class ApplicationTaskService {
     }
 
     await this.cloudbinService.deleteCloudBinBucket(appid)
-
-    // delete instance
-    const instance = await this.instanceService.get(app.appid)
-    if (instance && instance.deployment) {
-      await this.instanceService.remove(app.appid)
-      await this.unlock(appid)
-      return
-    }
 
     // update phase to `Deleted`
     await db.collection<Application>('Application').updateOne(
