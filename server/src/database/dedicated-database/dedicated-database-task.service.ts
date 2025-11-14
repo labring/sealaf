@@ -10,6 +10,7 @@ import { ServerConfig, TASK_LOCK_INIT_TIME } from 'src/constants'
 import { Injectable, Logger } from '@nestjs/common'
 import { RegionService } from 'src/region/region.service'
 import { ClusterService } from 'src/region/cluster/cluster.service'
+import { formatK8sErrorAsJson } from 'src/utils/k8s-error'
 
 @Injectable()
 export class DedicatedDatabaseTaskService {
@@ -84,9 +85,20 @@ export class DedicatedDatabaseTaskService {
         await this.dbService.applyDeployManifest(region, user, appid)
       } catch (error) {
         this.logger.error(
-          `apply dedicated database ${appid} yaml error:\n ${error.message}`,
+          `apply dedicated database ${appid} yaml error:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
+      await this.relock(appid, waitingTime)
+      return
+    }
+
+    // Wait for KubeBlock controller to initialize if Cluster phase is empty or not initialized
+    if (!manifest.status?.phase || manifest.status.phase === '') {
+      this.logger.debug(
+        `Cluster ${appid} phase is not initialized yet, waiting...`,
+      )
       await this.relock(appid, waitingTime)
       return
     }
@@ -120,7 +132,9 @@ export class DedicatedDatabaseTaskService {
         )
       } catch (error) {
         this.logger.error(
-          `apply dedicated database ops request start ${appid} yaml error:\n ${error.message}`,
+          `apply dedicated database ops request start ${appid} yaml error:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
 
@@ -232,23 +246,22 @@ export class DedicatedDatabaseTaskService {
     const manifest = await this.dbService.getDeployManifest(region, user, appid)
 
     if (!manifest) {
+      this.logger.warn(`Deploy manifest not found for ${appid}, skip stopping`)
       await this.db
         .collection<DedicatedDatabase>('DedicatedDatabase')
         .updateOne(
           {
-            appid: data.appid,
-            phase: DedicatedDatabasePhase.Stopping,
+            appid,
           },
-
           {
             $set: {
+              state: DedicatedDatabaseState.Stopped,
               phase: DedicatedDatabasePhase.Stopped,
               lockedAt: TASK_LOCK_INIT_TIME,
               updatedAt: new Date(),
             },
           },
         )
-
       this.logger.debug(
         `update dedicated database ${appid} state to stopped,note: ddb manifest not found`,
       )
@@ -279,7 +292,9 @@ export class DedicatedDatabaseTaskService {
         )
       } catch (error) {
         this.logger.error(
-          `apply dedicated database ops request stop ${appid} yaml error:\n ${error.message}`,
+          `apply dedicated database ops request stop ${appid} yaml error:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
 
@@ -431,7 +446,9 @@ export class DedicatedDatabaseTaskService {
         )
       } catch (error) {
         this.logger.error(
-          `apply dedicated database restart ${appid} yaml error:\n ${error.message}`,
+          `apply dedicated database restart ${appid} yaml error:\n${formatK8sErrorAsJson(
+            error,
+          )}`,
         )
       }
       await this.relock(appid, waitingTime)
@@ -445,7 +462,22 @@ export class DedicatedDatabaseTaskService {
     )
 
     if (!ddbDeployManifest) {
-      await this.relock(appid, waitingTime)
+      this.logger.warn(`Deploy manifest not found for ${appid}, skip restart`)
+      await this.db
+        .collection<DedicatedDatabase>('DedicatedDatabase')
+        .updateOne(
+          {
+            appid,
+          },
+          {
+            $set: {
+              state: DedicatedDatabaseState.Stopped,
+              phase: DedicatedDatabasePhase.Stopped,
+              lockedAt: TASK_LOCK_INIT_TIME,
+              updatedAt: new Date(),
+            },
+          },
+        )
       return
     }
 
