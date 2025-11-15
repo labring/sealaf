@@ -65,14 +65,7 @@ const CreateAppModal = (props: {
   const { application, type, isCurrentApp } = props;
   const { isOpen, onOpen, onClose } = useDisclosure();
   const queryClient = useQueryClient();
-  const {
-    runtimes = [],
-    regions = [],
-    showSuccess,
-    currentApp,
-    setCurrentApp,
-    updateCurrentApp,
-  } = useGlobalStore();
+  const { runtimes = [], regions = [], showSuccess, currentApp, setCurrentApp } = useGlobalStore();
 
   const title = useMemo(
     () => (type === "edit" ? t("Edit") : type === "change" ? t("Change") : t("CreateApp")),
@@ -195,45 +188,16 @@ const CreateAppModal = (props: {
             resource: newResource,
             autoscaling: autoscaling,
           };
-          setCurrentApp({ ...currentApp, bundle: newBundle });
+
+          // Configuration changes will automatically restart the application. Only running applications can change configuration.
+          setCurrentApp({
+            ...currentApp,
+            bundle: newBundle,
+            state: APP_STATUS.Restarting,
+            phase: APP_PHASE_STATUS.Started,
+          });
         }
 
-        if (currentApp) {
-          const isRunning =
-            currentApp?.phase === APP_PHASE_STATUS.Started &&
-            currentApp?.state === APP_STATUS.Running;
-
-          const isCpuChanged = application?.bundle.resource.limitCPU !== bundle?.cpu;
-          const isMemoryChanged = application?.bundle.resource.limitMemory !== bundle?.memory;
-          const isAutoscalingCanceled =
-            application?.bundle.autoscaling.enable && autoscaling?.enable;
-
-          const isRuntimeChanged = isCpuChanged || isMemoryChanged || isAutoscalingCanceled;
-
-          const isDedicatedDatabaseChanged =
-            application?.bundle.resource.dedicatedDatabase.limitCPU !==
-              bundle.dedicatedDatabase?.cpu ||
-            application?.bundle.resource.dedicatedDatabase.limitMemory !==
-              bundle.dedicatedDatabase?.memory ||
-            application?.bundle.resource.dedicatedDatabase.replicas !==
-              bundle.dedicatedDatabase?.replicas ||
-            application?.bundle.resource.dedicatedDatabase.capacity !==
-              bundle.dedicatedDatabase?.capacity;
-
-          if (!isRunning) {
-            if (isRuntimeChanged || isDedicatedDatabaseChanged) {
-              updateCurrentApp(currentApp!, APP_STATUS.Running);
-            }
-          }
-
-          if (isRunning) {
-            if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
-              updateCurrentApp(currentApp!, APP_STATUS.Restarting, true);
-            } else if (isRuntimeChanged || isDedicatedDatabaseChanged) {
-              updateCurrentApp(currentApp!, APP_STATUS.Restarting);
-            }
-          }
-        }
         break;
 
       case "create":
