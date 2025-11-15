@@ -187,45 +187,17 @@ function List(props: { appList: TApplicationItem[] }) {
                           </MenuItem>
                         </CreateAppModal>
 
-                        <CreateAppModal application={item} type="change">
-                          <MenuItem minH="40px" display={"block"}>
-                            <a className="text-primary block whitespace-nowrap" href="/edit">
-                              {t("Change")}
-                            </a>
-                          </MenuItem>
-                        </CreateAppModal>
+                        {item.phase === APP_PHASE_STATUS.Started && (
+                          <CreateAppModal application={item} type="change">
+                            <MenuItem minH="40px" display={"block"}>
+                              <a className="text-primary block whitespace-nowrap" href="/edit">
+                                {t("Change")}
+                              </a>
+                            </MenuItem>
+                          </CreateAppModal>
+                        )}
 
-                        {item.phase === APP_STATUS.Stopped ? (
-                          <MenuItem
-                            minH="40px"
-                            display={"block"}
-                            onClick={async (event) => {
-                              event?.preventDefault();
-                              const res = await updateAppStateMutation.mutateAsync({
-                                appid: item.appid,
-                                state: APP_STATUS.Running,
-                              });
-                              if (!res.error) {
-                                queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
-                                  return {
-                                    ...old,
-                                    data: old.data.map((app: any) => {
-                                      if (app.appid === item.appid) {
-                                        return {
-                                          ...app,
-                                          phase: APP_PHASE_STATUS.Starting,
-                                        };
-                                      }
-                                      return app;
-                                    }),
-                                  };
-                                });
-                              }
-                            }}
-                          >
-                            <span className="text-primary block">{t("SettingPanel.Start")}</span>
-                          </MenuItem>
-                        ) : (
+                        {item.phase === APP_PHASE_STATUS.Started && (
                           <ConfirmButton
                             headerText={t("SettingPanel.Restart")}
                             bodyText={
@@ -273,6 +245,38 @@ function List(props: { appList: TApplicationItem[] }) {
                           </ConfirmButton>
                         )}
 
+                        {item.phase === APP_PHASE_STATUS.Stopped && (
+                          <MenuItem
+                            minH="40px"
+                            display={"block"}
+                            onClick={async (event) => {
+                              event?.preventDefault();
+                              const res = await updateAppStateMutation.mutateAsync({
+                                appid: item.appid,
+                                state: APP_STATUS.Running,
+                              });
+                              if (!res.error) {
+                                queryClient.setQueryData(APP_LIST_QUERY_KEY, (old: any) => {
+                                  return {
+                                    ...old,
+                                    data: old.data.map((app: any) => {
+                                      if (app.appid === item.appid) {
+                                        return {
+                                          ...app,
+                                          phase: APP_PHASE_STATUS.Starting,
+                                        };
+                                      }
+                                      return app;
+                                    }),
+                                  };
+                                });
+                              }
+                            }}
+                          >
+                            <span className="text-primary block">{t("SettingPanel.Start")}</span>
+                          </MenuItem>
+                        )}
+
                         {item.phase === APP_PHASE_STATUS.Started && (
                           <ConfirmButton
                             headerText={t("SettingPanel.Pause")}
@@ -308,16 +312,18 @@ function List(props: { appList: TApplicationItem[] }) {
                           </ConfirmButton>
                         )}
 
-                        <DeleteAppModal
-                          item={item}
-                          onSuccess={() => queryClient.invalidateQueries(APP_LIST_QUERY_KEY)}
-                        >
-                          <MenuItem minH="40px" display={"block"}>
-                            <a className="block text-error-500" href="/delete">
-                              {t("DeleteApp")}
-                            </a>
-                          </MenuItem>
-                        </DeleteAppModal>
+                        {item.phase === APP_PHASE_STATUS.Stopped && (
+                          <DeleteAppModal
+                            item={item}
+                            onSuccess={() => queryClient.invalidateQueries(APP_LIST_QUERY_KEY)}
+                          >
+                            <MenuItem minH="40px" display={"block"}>
+                              <a className="block text-error-500" href="/delete">
+                                {t("DeleteApp")}
+                              </a>
+                            </MenuItem>
+                          </DeleteAppModal>
+                        )}
                       </MenuList>
                     </Menu>
                   </div>
