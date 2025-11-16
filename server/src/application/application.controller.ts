@@ -242,8 +242,8 @@ export class ApplicationController {
     // check: only running application can stop
     if (
       dto.state === ApplicationState.Stopped &&
-      app.state !== ApplicationState.Running &&
-      app.phase !== ApplicationPhase.Started
+      (app.state !== ApplicationState.Running ||
+        app.phase !== ApplicationPhase.Started)
     ) {
       return ResponseUtil.error(
         'The application is not running, can not stop it',
@@ -253,8 +253,8 @@ export class ApplicationController {
     // check: only stopped application can start
     if (
       dto.state === ApplicationState.Running &&
-      app.state !== ApplicationState.Stopped &&
-      app.phase !== ApplicationPhase.Stopped
+      (app.state !== ApplicationState.Stopped ||
+        app.phase !== ApplicationPhase.Stopped)
     ) {
       return ResponseUtil.error(
         'The application is not stopped, can not start it',
@@ -380,7 +380,6 @@ export class ApplicationController {
     const doc = await this.application.updateBundle(appid, dto, isTrialTier)
 
     // restart running application if cpu or memory changed
-    const isRunning = app.phase === ApplicationPhase.Started
     const isCpuChanged = origin.resource.limitCPU !== doc.resource.limitCPU
     const isMemoryChanged =
       origin.resource.limitMemory !== doc.resource.limitMemory
@@ -415,16 +414,17 @@ export class ApplicationController {
       await this.instance.reapplyHorizontalPodAutoscaler(app, hpa)
     }
 
-    if (isRunning) {
-      if (isRuntimeChanged && !isDedicatedDatabaseChanged) {
-        await this.application.updateState(appid, ApplicationState.Restarting)
-      } else if (isRuntimeChanged || isDedicatedDatabaseChanged) {
-        await this.application.updateState(appid, ApplicationState.Restarting)
-        await this.dedicateDatabase.updateState(
-          appid,
-          DedicatedDatabaseState.Restarting,
-        )
-      }
+    if (isDedicatedDatabaseChanged) {
+      await this.application.updateState(appid, ApplicationState.Restarting)
+      await this.dedicateDatabase.updateState(
+        appid,
+        DedicatedDatabaseState.Restarting,
+      )
+      return ResponseUtil.ok(doc)
+    }
+
+    if (isRuntimeChanged) {
+      await this.application.updateState(appid, ApplicationState.Restarting)
     }
 
     return ResponseUtil.ok(doc)
