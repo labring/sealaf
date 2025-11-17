@@ -68,7 +68,7 @@ const AppEnvList: React.FC<AppEnvListProps> = (props = {}) => {
                 bg={"none"}
                 _hover={{ color: "primary.600" }}
                 onClick={() => {
-                  updateCurrentApp(currentApp!, APP_STATUS.Running, onlyRuntimeFlag);
+                  updateCurrentApp(currentApp!, APP_STATUS.Running);
                   if (onClose) {
                     onClose();
                   }

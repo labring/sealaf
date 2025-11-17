@@ -162,14 +162,12 @@ export class InstanceTaskService {
       return
     }
 
-    if (ddb) {
-      if (
-        ddb.phase !== DedicatedDatabasePhase.Started ||
-        ddb.state !== DedicatedDatabaseState.Running
-      ) {
-        await this.relock(appid, waitingTime)
-        return
-      }
+    if (
+      ddb.phase !== DedicatedDatabasePhase.Started ||
+      ddb.state !== DedicatedDatabaseState.Running
+    ) {
+      await this.relock(appid, waitingTime)
+      return
     }
 
     // create instance
