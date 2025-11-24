@@ -102,6 +102,10 @@ export class ServerConfig {
   static get DATABASE_MONITOR_URL() {
     return process.env.DATABASE_MONITOR_URL
   }
+
+  static get KUBEBLOCK_V5_UPGRADE_URL() {
+    return process.env.KUBEBLOCK_V5_UPGRADE_URL
+  }
 }
 
 export const LABEL_KEY_APP_ID = 'sealaf.dev/appid'
