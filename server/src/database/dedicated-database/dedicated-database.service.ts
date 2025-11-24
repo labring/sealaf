@@ -32,6 +32,7 @@ import {
 } from '../entities/database-sync-record'
 import { extractNumber } from 'src/utils/number'
 import { formatK8sErrorAsJson } from 'src/utils/k8s-error'
+import { ServerConfig, KUBEBLOCK_V5_UPGRADE_API_TIMEOUT } from 'src/constants'
 
 const getDedicatedDatabaseName = (appid: string) => `sealaf-${appid}`
 const p_exec = promisify(exec)
@@ -167,6 +168,78 @@ export class DedicatedDatabaseService {
             spec,
             'horizontalScaling',
           )
+          // kubeBlock v5 compatible code
+          try {
+            if (
+              manifest?.metadata?.labels?.[
+                'clusterversion.kubeblocks.io/name'
+              ] === 'mongodb-5.0'
+            ) {
+              const url = ServerConfig.KUBEBLOCK_V5_UPGRADE_URL
+              if (url) {
+                const clusterName = manifest.metadata.name
+                const namespace = user.namespace
+                const replicas = spec.replicas
+
+                // Create AbortController for timeout
+                const controller = new AbortController()
+                const timeoutId = setTimeout(
+                  () => controller.abort(),
+                  KUBEBLOCK_V5_UPGRADE_API_TIMEOUT,
+                )
+
+                try {
+                  const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      namespace,
+                      database_name: clusterName,
+                      replicas,
+                    }),
+                    signal: controller.signal,
+                  })
+
+                  // Read response body for better error handling and logging
+                  let responseData: any
+                  const contentType = response.headers.get('content-type')
+                  if (contentType?.includes('application/json')) {
+                    responseData = await response.json()
+                  } else {
+                    responseData = await response.text()
+                  }
+
+                  if (!response.ok) {
+                    throw new Error(
+                      `HTTP error! status: ${response.status}, statusText: ${
+                        response.statusText
+                      }, body: ${JSON.stringify(responseData)}`,
+                    )
+                  }
+
+                  this.logger.log(
+                    `Called KubeBlock v5 upgrade API for ${appid}: cluster=${clusterName}, replicas=${replicas}, response: ${JSON.stringify(
+                      responseData,
+                    )}`,
+                  )
+                } finally {
+                  clearTimeout(timeoutId)
+                }
+              } else {
+                this.logger.warn(
+                  `KubeBlock v5 upgrade URL not configured (KUBEBLOCK_V5_UPGRADE_URL env var not set) for ${appid}`,
+                )
+              }
+            }
+          } catch (error) {
+            this.logger.error(
+              `Failed to call KubeBlock v5 upgrade API for ${appid}: ${error.message}`,
+            )
+            // Don't throw error, just log it as it's a compatibility feature
+          }
+
           results.push(result)
           this.logger.log(
             `Applied horizontalScaling ops request for ${appid}: replicas=${spec.replicas}`,

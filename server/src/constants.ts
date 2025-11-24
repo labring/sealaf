@@ -102,6 +102,10 @@ export class ServerConfig {
   static get DATABASE_MONITOR_URL() {
     return process.env.DATABASE_MONITOR_URL
   }
+
+  static get KUBEBLOCK_V5_UPGRADE_URL() {
+    return process.env.KUBEBLOCK_V5_UPGRADE_URL
+  }
 }
 
 export const LABEL_KEY_APP_ID = 'sealaf.dev/appid'
@@ -135,3 +139,6 @@ export const STORAGE_LIMIT = 1000 // 1000 items
 
 // HTTP interceptor
 export const HTTP_INTERCEPTOR_TIMEOUT = 3000 // 3s
+
+// KubeBlock v5 upgrade API
+export const KUBEBLOCK_V5_UPGRADE_API_TIMEOUT = 3000 // 3s
